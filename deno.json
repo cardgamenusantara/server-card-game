@@ -1,5 +1,8 @@
 {
   "deploy": {
+    "org": "cardgamenusantara",
+    "app": "server-card-game",
+    "install": "npm install",
     "runtime": {
       "mode": "dynamic",
       "entrypoint": "server.js"
