@@ -3056,7 +3056,11 @@ console.log(`📦 Total kartu: ${ALL_CARDS.length} (${ALL_PROVINCES.length} prov
 
 // HTTP Routes
 app.get('/stats', (req, res) => res.json(matchmaking.getStats()));
-app.get('/health', (req, res) => res.send('OK'));
+// [FIX SERVER-DOWN DETECTION] Header CORS ditambahkan agar endpoint ini bisa dipanggil
+// via fetch() dari domain front-end (dipakai client untuk membedakan "server benar-benar
+// mati" dari "koneksi WebSocket user sedang goyah sesaat"). Tanpa header ini, browser
+// akan memblokir pembacaan status respons meski server sebenarnya hidup normal.
+app.get('/health', (req, res) => res.set('Access-Control-Allow-Origin', '*').send('OK'));
 app.get('/leaderboard', async (req, res) => {
     const token = await fbGetToken();
     if (!token) return res.status(503).json({ error: "Firebase not configured" });
