@@ -3079,9 +3079,15 @@ app.get('/leaderboard', async (req, res) => {
     res.set('Access-Control-Allow-Origin', '*').json(entries.slice(0, limit));
 });
 app.get('/', (req, res) => {
-    const htmlPath = path.join(__dirname, 'index.html');
-    if (fs.existsSync(htmlPath)) { res.sendFile(htmlPath); }
-    else { res.status(404).send('index.html not found'); }
+    // Deployment ini hanya backend (REST + WebSocket) untuk Card Game Nusantara.
+    // File index.html (frontend) di-host terpisah (mis. GitHub Pages/Vercel/Netlify)
+    // dan cukup dikonfigurasi untuk connect ke wss://<domain-deno-deploy-anda>/
+    res.set('Access-Control-Allow-Origin', '*').json({
+        service: 'Card Game Nusantara - Server',
+        status: 'running',
+        websocket: 'Hubungkan client ke wss://<domain-app-ini>/',
+        endpoints: ['/health', '/stats', '/leaderboard']
+    });
 });
 
 // WebSocket Handler
