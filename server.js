@@ -13,7 +13,7 @@ import "npm:bufferutil@4.0.7";
 import "npm:utf-8-validate@6.0.3";
 import express from "npm:express@4.18.2";
 import http from "node:http";
-import WebSocket from "npm:ws@8.17.0";
+import WebSocket, { WebSocketServer } from "npm:ws@8.17.0";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -22,7 +22,7 @@ const __dirname = new URL(".", import.meta.url).pathname;
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocketServer({ server });
 
 // =============================================
 // DATA KARTU & PROVINSI
