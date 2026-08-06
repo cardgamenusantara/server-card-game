@@ -6,11 +6,7 @@
       "mode": "dynamic",
       "entrypoint": "server.js"
     },
-    "include": [
-      "server.js"
-    ],
-    "exclude": [
-      "*.html"
-    ]
+    "include": ["server.js"],
+    "exclude": ["*.html"]
   }
 }
