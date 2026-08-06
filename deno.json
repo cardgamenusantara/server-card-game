@@ -2,18 +2,11 @@
   "deploy": {
     "org": "cardgamenusantara",
     "app": "server-card-game",
-    "install": "npm install",
     "runtime": {
       "mode": "dynamic",
       "entrypoint": "server.js"
     },
-    "include": [
-      "server.js",
-      "package.json",
-      "node_modules/"
-    ],
-    "exclude": [
-      "*.html"
-    ]
+    "include": ["server.js"],
+    "exclude": ["*.html"]
   }
 }
