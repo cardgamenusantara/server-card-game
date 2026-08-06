@@ -1,12 +1,1 @@
-{
-  "deploy": {
-    "org": "cardgamenusantara",
-    "app": "server-card-game",
-    "runtime": {
-      "mode": "dynamic",
-      "entrypoint": "server.js"
-    },
-    "include": ["server.js"],
-    "exclude": ["*.html"]
-  }
-}
+V
