@@ -4,11 +4,14 @@
 // server.js - Converted from Deno (main.ts) to Node.js
 // ================================================
 
-const express = require('express');
-const http = require('http');
-const WebSocket = require('ws');
-const fs = require('fs');
-const path = require('path');
+import express from "npm:express@4.18.2";
+import http from "node:http";
+import WebSocket from "npm:ws@8.17.0";
+import fs from "node:fs";
+import path from "node:path";
+
+// Deno tidak punya __dirname/__filename bawaan seperti Node — dibuat manual dari import.meta
+const __dirname = new URL(".", import.meta.url).pathname;
 
 const app = express();
 const server = http.createServer(app);
@@ -519,6 +522,13 @@ function calcDrawLevel(drawCount) {
 const FB_DB_URL = process.env.FIREBASE_DATABASE_URL
     || "https://rex-server-8a176-default-rtdb.asia-southeast1.firebasedatabase.app";
 
+// [FIX REJOIN CROSS-SERVER] Identitas server ini ("wss1" atau "wss2") — WAJIB diset
+// beda-beda lewat environment variable SERVER_ID di tiap deployment (Deno Deploy = wss1,
+// Railway = wss2). Dipakai untuk menandai di Firebase server mana yang sedang menampung
+// sebuah room, supaya client tahu harus rejoin ke server yang mana tanpa perlu coba-coba.
+const SERVER_ID = process.env.SERVER_ID || 'wss1';
+console.log(`🆔 SERVER_ID = ${SERVER_ID} (set env var SERVER_ID di tiap deployment jika ini salah)`);
+
 let fbServiceAccount = null;
 let fbTokenCache = null;
 
@@ -529,7 +539,7 @@ let fbTokenCache = null;
     catch (e) { console.error("❌ FIREBASE_SERVICE_ACCOUNT JSON invalid:", e); }
 })();
 
-const { createSign } = require('crypto');
+import { createSign } from "node:crypto";
 
 async function fbGetToken() {
     if (!fbServiceAccount) return null;
@@ -615,6 +625,49 @@ async function fbSet(path, value) {
         console.error(`❌ fbSet PUT failed ${res.status}: ${errText}`);
     }
     return res.ok;
+}
+
+// [FIX REJOIN CROSS-SERVER] Kumpulkan semua userUid yang terkait sebuah room (pemain asli
+// + spectator), supaya bisa ditandai/dibersihkan di Firebase /activeRoom/{uid}.
+// Bot sengaja dilewati (tidak punya akun/UID Firebase).
+function _getRoomUids(room) {
+    const uids = new Set();
+    try {
+        (room?.gameEngine?.gs?.players || []).forEach(p => {
+            if (!p.isBot && p.userUid) uids.add(p.userUid);
+        });
+    } catch (_e) {}
+    try {
+        (room?.gameEngine?.spectatorUserUids || []).forEach(uid => { if (uid) uids.add(uid); });
+    } catch (_e) {}
+    return [...uids];
+}
+
+// [FIX REJOIN CROSS-SERVER] Tandai di Firebase bahwa room ini hidup di server (SERVER_ID) ini.
+// Fire-and-forget (tidak menunggu) & dibungkus try-catch — kalau Firebase gagal/lambat,
+// pertandingan tetap jalan seperti biasa, cuma fitur "rejoin cepat" ini yang tidak aktif
+// untuk match tsb (client otomatis fallback ke cara lama: coba WSS1 lalu WSS2).
+function markRoomActiveInFirebase(roomId, room) {
+    try {
+        const uids = _getRoomUids(room);
+        uids.forEach(uid => {
+            fbSet(`/activeRoom/${uid}`, { roomId, server: SERVER_ID, ts: Date.now() })
+                .catch(e => console.error(`⚠️ markRoomActiveInFirebase gagal untuk ${uid}:`, e));
+        });
+    } catch (e) { console.error('⚠️ markRoomActiveInFirebase error:', e); }
+}
+
+// [FIX REJOIN CROSS-SERVER] Hapus penanda room dari Firebase saat room benar-benar
+// dihapus dari memori (this.rooms.delete) — meniru persis siklus hidup room di memori,
+// supaya tidak ada data basi yang nyangkut lebih lama dari room aslinya.
+function clearRoomFromFirebase(roomId, room) {
+    try {
+        const uids = _getRoomUids(room);
+        uids.forEach(uid => {
+            fbSet(`/activeRoom/${uid}`, null)
+                .catch(e => console.error(`⚠️ clearRoomFromFirebase gagal untuk ${uid}:`, e));
+        });
+    } catch (e) { console.error('⚠️ clearRoomFromFirebase error:', e); }
 }
 
 async function fbRead(path) {
@@ -2479,6 +2532,7 @@ class MatchmakingQueue {
         }
         const room = { id: roomId, players, bots: botCount, status: 'starting', gameEngine, createdAt: Date.now() };
         this.rooms.set(roomId, room);
+        markRoomActiveInFirebase(roomId, room);
         gameEngine.onGameOver = () => { room.status = 'finished'; room.finishedAt = Date.now(); console.log(`🏁 Room ${roomId} selesai`); };
         setTimeout(() => {
             try {
@@ -2568,10 +2622,11 @@ class MatchmakingQueue {
         this.rooms.forEach((room, roomId) => {
             if (room.status === 'finished') {
                 const finishedTime = room.finishedAt ?? room.createdAt;
-                if ((now - finishedTime) > MAX_FINISHED_AGE) { console.log(`🗑️ Cleanup finished room ${roomId}`); this.rooms.delete(roomId); }
+                if ((now - finishedTime) > MAX_FINISHED_AGE) { console.log(`🗑️ Cleanup finished room ${roomId}`); clearRoomFromFirebase(roomId, room); this.rooms.delete(roomId); }
             } else if ((now - room.createdAt) > MAX_PLAYING_AGE) {
                 console.log(`🗑️ Cleanup stale room ${roomId}`);
                 try { room.gameEngine.cleanupMatch(); } catch(_) {}
+                clearRoomFromFirebase(roomId, room);
                 this.rooms.delete(roomId);
             }
         });
@@ -2766,10 +2821,11 @@ class MatchmakingQueue {
                 bots: Object.keys(room.botSlots).length, status: 'starting', gameEngine, createdAt: Date.now()
             };
             this.rooms.set(roomId, gameRoom);
+            markRoomActiveInFirebase(roomId, gameRoom);
             this.pendingCustomRooms.delete(roomId);
             gameEngine.onGameOver = () => {
                 gameRoom.status = 'finished'; gameRoom.finishedAt = Date.now();
-                setTimeout(() => { this.rooms.delete(roomId); }, 60000);
+                setTimeout(() => { clearRoomFromFirebase(roomId, gameRoom); this.rooms.delete(roomId); }, 60000);
             };
             room.players.forEach(p => { if (p.socket.readyState === WebSocket.OPEN) { try { p.socket.send(JSON.stringify({ type: 'PROVINCES_SELECTED', provinces: selectedProvinces, mandatory: MANDATORY_PROVINCE, roomId, playerId: p.id })); } catch(_) {} } });
             if (room.spectatorSocket?.readyState === WebSocket.OPEN) { try { room.spectatorSocket.send(JSON.stringify({ type: 'PROVINCES_SELECTED', provinces: selectedProvinces, mandatory: MANDATORY_PROVINCE, roomId, playerId: null })); } catch(_) {} }
@@ -2783,6 +2839,8 @@ class MatchmakingQueue {
             return true;
         } catch (error) {
             console.error(`❌ Gagal start custom room ${roomId}:`, error);
+            const _rm = this.rooms.get(roomId);
+            if (_rm) clearRoomFromFirebase(roomId, _rm);
             room.started = false; this.rooms.delete(roomId);
             return false;
         }
@@ -3079,15 +3137,9 @@ app.get('/leaderboard', async (req, res) => {
     res.set('Access-Control-Allow-Origin', '*').json(entries.slice(0, limit));
 });
 app.get('/', (req, res) => {
-    // Deployment ini hanya backend (REST + WebSocket) untuk Card Game Nusantara.
-    // File index.html (frontend) di-host terpisah (mis. GitHub Pages/Vercel/Netlify)
-    // dan cukup dikonfigurasi untuk connect ke wss://<domain-deno-deploy-anda>/
-    res.set('Access-Control-Allow-Origin', '*').json({
-        service: 'Card Game Nusantara - Server',
-        status: 'running',
-        websocket: 'Hubungkan client ke wss://<domain-app-ini>/',
-        endpoints: ['/health', '/stats', '/leaderboard']
-    });
+    const htmlPath = path.join(__dirname, 'index.html');
+    if (fs.existsSync(htmlPath)) { res.sendFile(htmlPath); }
+    else { res.status(404).send('index.html not found'); }
 });
 
 // WebSocket Handler
