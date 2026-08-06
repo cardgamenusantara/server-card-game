@@ -4,6 +4,13 @@
 // server.js - Converted from Deno (main.ts) to Node.js
 // ================================================
 
+// [FIX DENO LOADER BUG] "ws" punya optional dependency bufferutil & utf-8-validate
+// yang dicek pakai try{require(...)}catch{}. Loader Deno resolve semua require()
+// di awal (termasuk yang di dalam try/catch), jadi tanpa baris ini proses
+// caching dependency di Deno Deploy gagal duluan. Referensi bug:
+// https://github.com/denoland/deno-js-loader/issues/17
+import "npm:bufferutil@4.0.7";
+import "npm:utf-8-validate@6.0.3";
 import express from "npm:express@4.18.2";
 import http from "node:http";
 import WebSocket from "npm:ws@8.17.0";
