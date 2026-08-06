@@ -4,9 +4,9 @@
 // server.js - Converted from Deno (main.ts) to Node.js
 // ================================================
 
-import express from "express";
+import express from "npm:express@4.18.2";
 import http from "node:http";
-import WebSocket from "ws";
+import WebSocket from "npm:ws@8.17.0";
 import fs from "node:fs";
 import path from "node:path";
 
