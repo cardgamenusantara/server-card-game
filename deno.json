@@ -8,6 +8,6 @@
       "entrypoint": "server.js"
     },
     "include": ["server.js", "package.json"],
-    "exclude": ["*.html", "node_modules/"]
+    "exclude": ["*.html"]
   }
 }
