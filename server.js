@@ -30,6 +30,7 @@ const wss = new WebSocketServer({ server });
 // karena ID inilah yang dipetakan ke file gambar/stiker/<id>.mp4
 // =============================================
 const STICKER_IDS = new Set(['nangis', 'bagus', 'tertawa', 'tengil']);
+const STICKER_COOLDOWN_MS = 12000; // 12 detik — berlaku untuk player maupun bot
 
 // =============================================
 // DATA KARTU & PROVINSI
@@ -1159,6 +1160,7 @@ class GameEngine {
             p.freed = false; p.isProcessingAction = false;
             p.drawProb = 0; p.mustPlayMatching = false;
             p.drawTurnIndex = 0; p.drawOnceNoMatch = false;
+            p.roundDrawCount = 0; // [STIKER BOT] hitung ulang jumlah draw per ronde (bukan forcePickStreak — itu sengaja lintas-ronde)
             this.clearAfkTimer(p);
         });
         setTimeout(() => { this.gs.isStartingPhase = false; }, 100);
@@ -1190,6 +1192,8 @@ class GameEngine {
         this.gs.phase1Player = phase1Player.id;
         this.broadcastLog(`🎯 👤 ${phase1Player.name} mendapat giliran Tahap 1!`);
         if (phase1Player.isBot) {
+            // [STIKER BOT] Bot "menang" (dapat hak jatuh kartu duluan) → stiker Bagus/Tertawa (acak)
+            this.botSendSticker(phase1Player, Math.random() < 0.5 ? 'bagus' : 'tertawa');
             this.broadcastGameState();
             setTimeout(() => this.botPlayPhase1(phase1Player), 1000);
         } else {
@@ -1684,6 +1688,7 @@ class GameEngine {
             const drawPlayers  = sorted.slice(0, sorted.length - jumlahBebas);
             for (const p of bebasPlayers) {
                 p.mustForcePick = false; p.hasPlayed = true; p.freed = true;
+                if (p.isBot) p.forcePickStreak = 0; // [STIKER BOT] dibebaskan → streak putus
                 this.broadcastLog(`✅ 👤 ${p.name} DIBEBASKAN dari Force Pick! (kartu terbanyak)`);
             }
             this.gs.drawTurnQueue = drawPlayers;
@@ -1743,6 +1748,10 @@ class GameEngine {
                 this.gs.topCard.splice(this.gs.topCard.findIndex(c => c.id === chosen.id), 1);
                 bot.hand.push(chosen); bot.mustForcePick = false; bot.hasPlayed = true;
                 this.updatePower(bot);
+                // [STIKER BOT] Force pick lebih dari 2 ronde berturut-turut → stiker Nangis
+                bot.forcePickStreak = (bot.forcePickStreak || 0) + 1;
+                if (bot.forcePickStreak > 2) this.botSendSticker(bot, 'nangis');
+                this.checkBotTengilSticker(bot);
                 this.gs.currentRoundPlays.push({ playerId: bot.id, playerName: bot.name, card: chosen, power: chosen.power, isForcePickPlay: true });
                 this.broadcastLog(`?? ${bot.name} Mengambil kartu: ${chosen.name} (Kekuatan: ${chosen.power})`);
                 this.broadcastGameState();
@@ -1772,6 +1781,10 @@ class GameEngine {
             player.hasPlayed = true;
             this.gs.currentProvince = card.province; this.gs.topCard = [card];
             this.updatePower(player);
+            if (player.isBot) {
+                player.forcePickStreak = 0; // [STIKER BOT] main normal (tanpa force pick) → streak putus
+                this.checkBotTengilSticker(player);
+            }
             this.gs.currentRoundPlays.push({ playerId: player.id, playerName: player.name, card, power: card.power });
             this.broadcastLog(`👤 ${player.name} menjatuhkan ${card.name} (${card.province}) - Kekuatan ${card.power}`);
             this.checkWin(player); this.broadcastGameState();
@@ -1781,6 +1794,10 @@ class GameEngine {
             this.gs.topCard.push(card); player.hasPlayed = true;
             player.mustPlayMatching = false;
             this.updatePower(player);
+            if (player.isBot) {
+                player.forcePickStreak = 0; // [STIKER BOT] main normal (tanpa force pick) → streak putus
+                this.checkBotTengilSticker(player);
+            }
             this.gs.currentRoundPlays.push({ playerId: player.id, playerName: player.name, card, power: card.power });
             this.broadcastLog(`👤 ${player.name} menjatuhkan ${card.name} - Kekuatan ${card.power}`);
             this.checkWin(player); this.broadcastGameState();
@@ -1790,6 +1807,11 @@ class GameEngine {
 
     handleDrawCardInternal(player) {
         this.clearAfkTimer(player);
+        if (player.isBot) {
+            player.roundDrawCount = (player.roundDrawCount || 0) + 1;
+            // [STIKER BOT] Draw kartu lebih dari 5x dalam 1 ronde → stiker Nangis
+            if (player.roundDrawCount > 5) this.botSendSticker(player, 'nangis');
+        }
         const drewOk = this.dealCard(player);
         if (drewOk) {
             // Cek apakah kartu yang baru didapat cocok dengan provinsi aktif
@@ -1904,6 +1926,10 @@ class GameEngine {
                 this.gs.topCard.splice(this.gs.topCard.findIndex(c => c.id === chosen.id), 1);
                 bot.hand.push(chosen); bot.mustForcePick = false; bot.hasPlayed = true;
                 this.updatePower(bot);
+                // [STIKER BOT] Force pick lebih dari 2 ronde berturut-turut → stiker Nangis
+                bot.forcePickStreak = (bot.forcePickStreak || 0) + 1;
+                if (bot.forcePickStreak > 2) this.botSendSticker(bot, 'nangis');
+                this.checkBotTengilSticker(bot);
                 this.gs.currentRoundPlays.push({ playerId: bot.id, playerName: bot.name, card: chosen, power: chosen.power, isForcePickPlay: true });
                 this.broadcastLog(`👤 ${bot.name} Mengambil kartu: ${chosen.name} (Kekuatan: ${chosen.power})`);
             }
@@ -2255,6 +2281,28 @@ class GameEngine {
         this.spectatorSockets.forEach(s => {
             if (s.readyState === WebSocket.OPEN) { try { s.send(JSON.stringify(message)); } catch(e) {} }
         });
+    }
+
+    // =============================================
+    // FITUR STIKER — BOT
+    // Bot hanya boleh pakai stiker di mode RANKED (bukan Custom Match/Tantang).
+    // Cooldown 12 detik berlaku sama seperti player (disimpan di bot.lastStickerAt).
+    // =============================================
+    botSendSticker(bot, stickerId) {
+        if (!bot || !bot.isBot) return;
+        if (this.isCustomRoom) return; // tidak berlaku di mode Tantang/Custom Match
+        if (!STICKER_IDS.has(stickerId)) return;
+        const now = Date.now();
+        if (bot.lastStickerAt && (now - bot.lastStickerAt) < STICKER_COOLDOWN_MS) return;
+        bot.lastStickerAt = now;
+        this.broadcastToAll({ type: 'STICKER_RECEIVED', playerId: bot.id, playerName: bot.name, stickerId, ts: now });
+    }
+
+    // Dipanggil setiap kali kartu di tangan bot berkurang/bertambah — kirim stiker "tengil"
+    // kalau kartu bot tersisa PERSIS 2 (dekat menang).
+    checkBotTengilSticker(bot) {
+        if (!bot || !bot.isBot || bot.winner) return;
+        if (bot.hand && bot.hand.length === 2) this.botSendSticker(bot, 'tengil');
     }
 
     updatePlayerSocket(playerId, socket) {
@@ -3594,7 +3642,7 @@ wss.on('connection', (socket) => {
                             // [ANTI-SPAM] Rate limit server-side 3 detik per pemain, terlepas dari klien.
                             // Ini mencegah klien yang dimodifikasi mengirim stiker lebih cepat dari cooldown UI.
                             if (rp) {
-                                if (rp.lastStickerAt && (now - rp.lastStickerAt) < 3000) break;
+                                if (rp.lastStickerAt && (now - rp.lastStickerAt) < STICKER_COOLDOWN_MS) break;
                                 rp.lastStickerAt = now;
                             }
                             room.gameEngine.broadcastToAll({
