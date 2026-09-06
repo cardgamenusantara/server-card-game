@@ -30,469 +30,545 @@ const wss = new WebSocketServer({ server });
 // karena ID inilah yang dipetakan ke file gambar/stiker/<id>.mp4
 // =============================================
 const STICKER_IDS = new Set(['nangis', 'bagus', 'tertawa', 'tengil']);
-const STICKER_COOLDOWN_MS = 12000; // 12 detik — berlaku untuk player maupun bot
+const STICKER_COOLDOWN_MS = 8000; // 8 detik — berlaku untuk player maupun bot
 const STICKER_SEND_CHANCE = 0.6; // Meski kondisi terpenuhi, bot cuma 60% kemungkinan benar-benar kirim stiker
 
 // =============================================
 // DATA KARTU & PROVINSI
 // =============================================
 const ALL_PROVINCES = [
-    { name: "Aceh", cards: [
-        { name: "Kopi Gayo",                  type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Masjid Raya Baiturrahman",   type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertanian Kopi",             type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumoh Aceh",                 type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Rencong",                    type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Ulee Balang",                type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Serune Kalee",               type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Saman",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Peusijuek",                  type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Mie Aceh",                   type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Sumatera Utara", cards: [
-        { name: "Karet & Kelapa Sawit",       type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Istana Maimun",              type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perkebunan Sawit",           type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Bolon",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Piso Gaja Dompak",           type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Ulos",                       type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Gondang Sabangunan",         type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Tor-Tor",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Mangulosi",                  type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Bika Ambon",                 type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Sumatera Barat", cards: [
-        { name: "Gambir & Kulit Manis",       type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Jam Gadang",                 type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perdagangan Rempah",         type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Gadang",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Karih",                      type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Bundo Kanduang",             type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Saluang",                    type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Piring",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Batagak Penghulu",           type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Rendang",                    type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Riau", cards: [
-        { name: "Minyak Bumi",                type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Istana Siak",                type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertambangan Minyak",        type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Selaso Jatuh Kembar",  type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Pedang Jenawi",              type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Teluk Belanga",              type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Gambus",                     type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Zapin",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Tepuk Tepung Tawar",         type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Gulai Belacan",              type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Kepulauan Riau", cards: [
-        { name: "Bauksit & Timah",            type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Benteng Bukit Kursi",       type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perikanan Laut",             type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Belah Bubung",         type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Badik Tumbuk Lada",          type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Kebaya Labuh",               type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Gong",                       type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Tandak",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Mandi Safar",                type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Otak-otak",                  type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Jambi", cards: [
-        { name: "Batubara & Karet",           type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Candi Muaro Jambi",          type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perkebunan Karet",           type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Kajang Leko",          type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Keris Siginjai",             type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Baju Kurung Tanggung",       type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Kelintang",                  type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Sekapur Sirih",         type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Betangas",                   type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Tempoyak",                   type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Bengkulu", cards: [
-        { name: "Batubara & Emas",            type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Benteng Marlborough",        type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertambangan Batu Bara",     type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Bubungan Lima",        type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Rudus",                      type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Pakaian Rejang Lebong",      type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Dol",                        type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Andun",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Bimbang Adat",               type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Pendap",                     type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Sumatera Selatan", cards: [
-        { name: "Minyak & Gas Bumi",          type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Jembatan Ampera",            type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertambangan Minyak",        type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Limas",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Tombak Trisula",             type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Aesan Gede",                 type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Accordion Palembang",        type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Tanggai",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Nganggung",                  type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Pempek",                     type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Bangka Belitung", cards: [
-        { name: "Timah",                      type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Benteng Kuto Panji",         type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertambangan Timah",         type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Rakit",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Siwar",                      type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Pakaian Seting",             type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Dambus",                     type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Sepen",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Buang Jong",                 type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Lempah Kuning",              type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Lampung", cards: [
-        { name: "Kopi Robusta Lampung",       type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Menara Siger",               type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perkebunan Kopi",            type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Nuwou Sesat",          type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Terapang",                   type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Pakaian Tulang Bawang",      type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Gamolan Pekhing",            type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Sigeh Penguten",        type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Cangget",                    type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Seruit",                     type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "DKI Jakarta", cards: [
-        { name: "Sumber Daya Laut (Perikanan)",      type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Stadhuis",                   type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perdagangan & Jasa",         type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Kebaya",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Golok",                      type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Kebaya Encim",               type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Tehyan",                     type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Yapong",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Palang Pintu",               type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Kerak Telor",                type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Jawa Barat", cards: [
-        { name: "Teh & Kina",                 type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Keraton Kasepuhan Cirebon",  type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perkebunan Teh",             type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Kasepuhan",            type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Kujang",                     type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Kebaya Sunda",               type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Angklung",                   type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Jaipong",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Seren Taun",                 type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Karedok",                    type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Banten", cards: [
-        { name: "Baja & Industri",            type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Masjid Agung Banten",        type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Industri Baja",              type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Baduy",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Golok Ciomas",               type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Pakaian Pangsi",             type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Dogdog Lojor",               type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Cokek",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Seba Baduy",                 type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Sate Bandeng",               type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Jawa Tengah", cards: [
-        { name: "Lahan Pertanian (Padi)",     type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Candi Borobudur",            type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Industri Tekstil",           type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Joglo",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Keris",                      type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Kebaya Jawa",                type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Gamelan",                    type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Serimpi",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Sekaten",                    type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Lumpia",                     type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "DI Yogyakarta", cards: [
-        { name: "Material Vulkanik (Pasir dan Batuan)", type: "Sumber Daya Alam", rarity: "mythic", power: 10 },
-        { name: "Keraton Yogyakarta",         type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Industri Kerajinan",         type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Bangsal Kencono",            type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Keris Yogyakarta",           type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Kebaya Kesatrian",           type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Gamelan Yogyakarta",         type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Kumbang",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Labuhan Merapi",             type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Gudeg",                      type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Jawa Timur", cards: [
-        { name: "Garam & Tembakau",           type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Candi Penataran",            type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Industri Garam",             type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Situbondo",            type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Clurit",                     type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Pesa'an",                    type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Saronen",                    type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Remo",                  type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Karapan Sapi",               type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Rujak Cingur",               type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Bali", cards: [
-        { name: "Kopi Kintamani",             type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Pura Besakih",               type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pariwisata Budaya",          type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Gapura Candi Bentar",  type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Keris Bali",                 type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Payas Agung",                type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Gamelan Bali",               type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Pendet",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Ngaben",                     type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Ayam Betutu",                type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Nusa Tenggara Barat", cards: [
-        { name: "Mutiara Lombok",             type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Istana Dalam Loka",          type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Budidaya Mutiara",           type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Dalam Loka",           type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Keris NTB",                  type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Lambung",                    type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Serunai NTB",                type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Gandrung",              type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Bau Nyale",                  type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Ayam Taliwang",              type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Nusa Tenggara Timur", cards: [
-        { name: "Kopi Flores & Cendana",      type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Benteng Portugis Solor",     type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Peternakan Sapi",            type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Musalaki",             type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Sundu",                      type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Pakaian Amarasi",            type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Sasando",                    type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Caci",                  type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Pati Ka",                    type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Se'i",                       type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Kalimantan Barat", cards: [
-        { name: "Bauksit & Emas",             type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Keraton Kadriyah Pontianak", type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertambangan Bauksit",       type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Panjang",              type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Mandau",                     type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "King Baba",                  type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Sape",                       type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Monong",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Naik Dango",                 type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Bubur Pedas",                type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Kalimantan Tengah", cards: [
-        { name: "Rotan & Kayu Ulin",          type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Istana Kuning Sampit",       type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Kehutanan & Rotan",          type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Betang",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Mandau Kalteng",             type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Sangkarut",                  type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Garantung",                  type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Giring-giring",         type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Tiwah",                      type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Juhu Singkah",               type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Kalimantan Selatan", cards: [
-        { name: "Intan & Batubara",           type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Masjid Sultan Suriansyah",   type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertambangan Intan",         type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Bubungan Tinggi",      type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Keris Banjar",               type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Babaju Kun Galung",          type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Panting",                    type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Baksa Kembang",         type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Aruh Ganal",                 type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Soto Banjar",                type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Kalimantan Timur", cards: [
-        { name: "Minyak & Gas Kaltim",        type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Keraton Kutai Kartanegara",  type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertambangan Migas",         type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Lamin",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Mandau Kaltim",              type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Kustin",                     type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Sape Kaltim",                type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Gong",                  type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Erau",                       type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Ayam Cincane",               type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Kalimantan Utara", cards: [
-        { name: "Gas Alam & Kelapa Sawit",    type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Benteng Tarakan",            type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perikanan & Kehutanan",      type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Baloy",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Mandau Kalut",               type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Ta'a",                       type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Sampe",                      type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Jepen",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Iraw Tengkayu",              type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Kepiting Soka",              type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Sulawesi Utara", cards: [
-        { name: "Kelapa & Cengkeh",           type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Benteng Moraya",             type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perikanan Laut",             type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Walewangko",           type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Keris Sulut",                type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Laku Tepu",                  type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Kolintang",                  type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Maengket",              type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Tulude",                     type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Bubur Manado",               type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Gorontalo", cards: [
-        { name: "Jagung & Ikan Tuna",         type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Benteng Otanaha",            type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertanian Jagung",           type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Dulohupa",             type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Wamilo",                     type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Biliu",                      type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Polopalo",                   type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Polopalo",              type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Molonthalo",                 type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Binte Biluhuta",             type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Sulawesi Tengah", cards: [
-        { name: "Nikel & Emas Sulteng",       type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Masjid Tua Luwuk",           type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertambangan Nikel",         type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Tambi",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Pasatimpo",                  type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Koje",                       type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Ganda",                      type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Lumense",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Balia",                      type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Kaledo",                     type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Sulawesi Barat", cards: [
-        { name: "Kakao & Kelapa Sulbar",      type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Istana Malaweg",             type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perkebunan Kakao",           type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Boyang",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Badik Sulbar",               type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Pattuqduq Towaine",          type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Kecapi Sulbar",              type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Patuddu",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Sayyang Pattu'du",           type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Bau Peapi",                  type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Sulawesi Selatan", cards: [
-        { name: "Nikel & Besi Sulsel",        type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Benteng Rotterdam",          type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertambangan Nikel",         type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Tongkonan",            type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Badik",                      type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Baju Bodo",                  type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Kecapi Sulsel",              type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Kipas Pakarena",        type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Rambu Solo",                 type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Coto Makassar",              type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Sulawesi Tenggara", cards: [
-        { name: "Nikel & Aspal Buton",        type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Benteng Keraton Buton",      type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertambangan Aspal",         type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Istana Buton",         type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Keris Sultra",               type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Babu Nggawi",                type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Ladolado",                   type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Lulo",                  type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Posuo",                      type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Lapa-lapa",                  type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Maluku", cards: [
-        { name: "Pala & Cengkeh Maluku",      type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Benteng Belgica Banda",      type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perkebunan Rempah",          type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Baileo",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Parang Salawaku",            type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Baju Cele",                  type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Tifa",                       type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Cakalele",              type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Pukul Sapu",                 type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Papeda",                     type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Maluku Utara", cards: [
-        { name: "Nikel & Cengkeh Malut",      type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Benteng Tolukko Ternate",    type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertambangan Nikel",         type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Sasadu",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Parang Malut",               type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Manteren Lamo",              type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Tifa Malut",                 type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Lenso",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Kololi Kie",                 type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Gohu Ikan",                  type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Papua", cards: [
-        { name: "Emas & Tembaga Freeport",    type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Tugu MacArthur Jayapura",    type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Pertambangan Emas",          type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Honai",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Pisau Belati Papua",         type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Koteka",                     type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Tifa Papua",                 type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Musyoh",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Bakar Batu",                 type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Papeda Papua",               type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Papua Barat", cards: [
-        { name: "Gas Alam & Ikan Laut",       type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Tugu Jepang Manokwari",      type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perikanan & Migas",          type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Mod Aki Aksa",         type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Pisau Pabar",                type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Ewer",                       type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Tifa Pabar",                 type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Suanggi",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Wor",                        type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Ikan Bakar Manokwari",       type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Papua Selatan", cards: [
-        { name: "Kayu & Hasil Hutan",         type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Penjara Boven Digoel",       type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Kehutanan",                  type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Gotad",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Pisau Pasel",                type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Pummi",                      type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Tifa Pasel",                 type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Gatzi",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Yi Ha",                      type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Sagu Sep",                   type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Papua Tengah", cards: [
-        { name: "Emas & Hasil Hutan Pateng",  type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Kampung Tua Mosandurei",     type: "Tempat Bersejarah",   rarity: "legendary",   power: 9 },
-        { name: "Pertanian & Kehutanan",      type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Karapao",              type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Pisau Pateng",               type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Sali",                       type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Tifa Pateng",                type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Yuw",                   type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Bakar Batu Pateng",          type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Sagu Bakar",                 type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Papua Pegunungan", cards: [
-        { name: "Hasil Hutan & Kopi",         type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Lembah Baliem",              type: "Tempat Bersejarah",   rarity: "legendary",   power: 9 },
-        { name: "Pertanian Pegunungan",       type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Honai Pegunungan",     type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Pisau Peg",                  type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Yokal",                      type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Pikon",                      type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Selamat Datang",        type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Festival Lembah Baliem",     type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Udang Selingkuh",            type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
-    { name: "Papua Barat Daya", cards: [
-        { name: "Ikan & Mutiara Sorong",      type: "Sumber Daya Alam",        rarity: "mythic",      power: 10 },
-        { name: "Pillbox",                    type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
-        { name: "Perikanan & Pariwisata",     type: "Sektor Ekonomi",      rarity: "rareplus",    power: 7 },
-        { name: "Rumah Kambik",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
-        { name: "Pisau Pabarday",             type: "Senjata Tradisional", rarity: "rarestar",    power: 6 },
-        { name: "Boe",                        type: "Pakaian Adat",        rarity: "rare",        power: 5 },
-        { name: "Tifa Pabarday",              type: "Alat Musik",          rarity: "uncommon",    power: 4 },
-        { name: "Tari Aluyen",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
-        { name: "Injak Piring",               type: "Adat Istiadat",       rarity: "commonplus",  power: 2 },
-        { name: "Ikan Kuah Kuning",           type: "Makanan Khas",        rarity: "common",      power: 1 },
-    ]},
+            { name: "Aceh", cards: [
+                { name: "Kopi Gayo",                  type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Masjid Raya Baiturrahman",   type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertanian Kopi",             type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumoh Aceh",                 type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Rencong",                    type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Ulee Balang",                type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Serune Kalee",               type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Saman",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Peusijuek",                  type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Mie Aceh",                   type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kerawang Gayo",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Aceh",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Bali", cards: [
+                { name: "Kopi Kintamani",             type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Pura Besakih",               type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pariwisata Budaya",          type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Gapura Candi Bentar",  type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Keris Bali",                 type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Payas Agung",                type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Gamelan Bali",               type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Pendet",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Ngaben",                     type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Ayam Betutu",                type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kain Tenun Endek",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Bali",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Bangka Belitung", cards: [
+                { name: "Timah",                      type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Benteng Kuto Panji",         type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertambangan Timah",         type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Rakit",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Siwar",                      type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Pakaian Seting",             type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Dambus",                     type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Sepen",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Buang Jong",                 type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Lempah Kuning",              type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Terasi Bangka",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Melayu Bangka",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Banten", cards: [
+                { name: "Baja & Industri",            type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Masjid Agung Banten",        type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Industri Baja",              type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Baduy",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Golok Ciomas",               type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Pakaian Pangsi",             type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Dogdog Lojor",               type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Cokek",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Seba Baduy",                 type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Sate Bandeng",               type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Batik Banten",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Sunda Banten",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Bengkulu", cards: [
+                { name: "Batubara & Emas",            type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Benteng Marlborough",        type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertambangan Batu Bara",     type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Bubungan Lima",        type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Rudus",                      type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Pakaian Rejang Lebong",      type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Dol",                        type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Andun",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Bimbang Adat",               type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Pendap",                     type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Sirup Kalamansi",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Rejang",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "DI Yogyakarta", cards: [
+                { name: "Material Vulkanik (Pasir dan Batuan)", type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Keraton Yogyakarta",         type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Industri Kerajinan",         type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Bangsal Kencono",            type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Keris Yogyakarta",           type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Kebaya Kesatrian",           type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Gamelan Yogyakarta",         type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Kumbang",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Labuhan Merapi",             type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Gudeg",                      type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kerajinan Perak Kotagede",   type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Jawa Yogyakarta",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "DKI Jakarta", cards: [
+                { name: "Sumber Daya Laut (Perikanan)",      type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Stadhuis",                   type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perdagangan & Jasa",         type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Kebaya",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Golok",                      type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Kebaya Encim",               type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Tehyan",                     type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Yapong",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Palang Pintu",               type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Kerak Telor",                type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Bir Pletok Betawi",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Betawi",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Gorontalo", cards: [
+                { name: "Jagung & Ikan Tuna",         type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Benteng Otanaha",            type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertanian Jagung",           type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Dulohupa",             type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Wamilo",                     type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Biliu",                      type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Polopalo",                   type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Polopalo",              type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Molonthalo",                 type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Binte Biluhuta",             type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kain Karawang Upahiya",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Gorontalo",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Jambi", cards: [
+                { name: "Batubara & Karet",           type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Candi Muaro Jambi",          type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perkebunan Karet",           type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Kajang Leko",          type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Keris Siginjai",             type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Baju Kurung Tanggung",       type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Kelintang",                  type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Sekapur Sirih",         type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Betangas",                   type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Tempoyak",                   type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Batik Jambi",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Melayu Jambi",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Jawa Barat", cards: [
+                { name: "Teh & Kina",                 type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Keraton Kasepuhan Cirebon",  type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perkebunan Teh",             type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Kasepuhan",            type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Kujang",                     type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Kebaya Sunda",               type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Angklung",                   type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Jaipong",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Seren Taun",                 type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Karedok",                    type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kain Batik Mega Mendung",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Sunda",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Jawa Tengah", cards: [
+                { name: "Lahan Pertanian (Padi)",            type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Candi Borobudur",            type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Industri Tekstil",           type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Joglo",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Keris",                      type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Kebaya Jawa",                type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Gamelan",                    type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Serimpi",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Sekaten",                    type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Lumpia",                     type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Ukiran Kayu Jepara",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Jawa",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Jawa Timur", cards: [
+                { name: "Garam & Tembakau",           type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Candi Penataran",            type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Industri Garam",             type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Situbondo",            type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Clurit",                     type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Pesa'an",                    type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Saronen",                    type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Remo",                  type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Karapan Sapi",               type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Rujak Cingur",               type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kerajinan Kulit Tanggulangin",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Jawa Arekan",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Kalimantan Barat", cards: [
+                { name: "Bauksit & Emas",             type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Keraton Kadriyah Pontianak", type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertambangan Bauksit",       type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Panjang",              type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Mandau",                     type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "King Baba",                  type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Sape",                       type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Monong",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Naik Dango",                 type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Bubur Pedas",                type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Lidah Buaya Pontianak",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Dayak Kanayatn",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Kalimantan Selatan", cards: [
+                { name: "Intan & Batubara",           type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Masjid Sultan Suriansyah",   type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertambangan Intan",         type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Bubungan Tinggi",      type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Keris Banjar",               type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Babaju Kun Galung",          type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Panting",                    type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Baksa Kembang",         type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Aruh Ganal",                 type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Soto Banjar",                type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kain Sasirangan",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Banjar",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Kalimantan Tengah", cards: [
+                { name: "Rotan & Kayu Ulin",          type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Istana Kuning Sampit",       type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Kehutanan & Rotan",          type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Betang",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Mandau Kalteng",             type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Sangkarut",                  type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Garantung",                  type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Giring-giring",         type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Tiwah",                      type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Juhu Singkah",               type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kerajinan Rotan Dayak",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Dayak Ngaju",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Kalimantan Timur", cards: [
+                { name: "Minyak & Gas Kaltim",        type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Keraton Kutai Kartanegara",  type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertambangan Migas",         type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Lamin",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Mandau Kaltim",              type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Kustin",                     type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Sape Kaltim",                type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Gong",                  type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Erau",                       type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Ayam Cincane",               type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Amplang Ikan Pipih",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Kutai",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Kalimantan Utara", cards: [
+                { name: "Gas Alam & Kelapa Sawit",    type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Benteng Tarakan",            type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perikanan & Kehutanan",      type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Baloy",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Mandau Kalut",               type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Ta'a",                       type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Sampe",                      type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Jepen",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Iraw Tengkayu",              type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Kepiting Soka",              type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Sarang Burung Walet",        type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Tidung",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Kepulauan Riau", cards: [
+                { name: "Bauksit & Timah",            type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Benteng Bukit Kursi",        type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perikanan Laut Kepri",       type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Belah Bubung",         type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Badik Tumbuk Lada",          type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Kebaya Labuh",               type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Gong",                       type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Tandak",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Mandi Safar",                type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Otak-otak",                  type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kerupuk Atom",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Melayu Kepulauan Riau",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Lampung", cards: [
+                { name: "Kopi Robusta Lampung",       type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Menara Siger",               type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perkebunan Kopi",            type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Nuwou Sesat",          type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Terapang",                   type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Pakaian Tulang Bawang",      type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Gamolan Pekhing",            type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Sigeh Penguten",        type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Cangget",                    type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Seruit",                     type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Keripik Pisang Lampung",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Lampung",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Maluku", cards: [
+                { name: "Pala & Cengkeh Maluku",      type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Benteng Belgica Banda",      type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perkebunan Rempah",          type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Baileo",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Parang Salawaku",            type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Baju Cele",                  type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Tifa",                       type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Cakalele",              type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Pukul Sapu",                 type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Papeda",                     type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Minyak Kayu Putih Buru",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Melayu Ambon",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Maluku Utara", cards: [
+                { name: "Nikel & Cengkeh Malut",      type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Benteng Tolukko Ternate",    type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertambangan Nikel Malut",   type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Sasadu",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Parang Malut",               type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Manteren Lamo",              type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Tifa Malut",                 type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Lenso",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Kololi Kie",                 type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Gohu Ikan",                  type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Batu Bacan",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Melayu Ternate",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Nusa Tenggara Barat", cards: [
+                { name: "Mutiara Lombok",             type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Istana Dalam Loka",          type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Budidaya Mutiara",           type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Dalam Loka",           type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Keris NTB",                  type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Lambung",                    type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Serunai NTB",                type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Gandrung",              type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Bau Nyale",                  type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Ayam Taliwang",              type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Susu Kuda Liar Sumbawa",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Sasak",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Nusa Tenggara Timur", cards: [
+                { name: "Kopi Flores & Cendana",      type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Benteng Portugis Solor",     type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Peternakan Sapi",            type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Musalaki",             type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Sundu",                      type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Pakaian Amarasi",            type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Sasando",                    type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Caci",                  type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Pati Ka",                    type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Se'i",                       type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kain Tenun Ikat NTT",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Manggarai",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Papua", cards: [
+                { name: "Emas & Tembaga Freeport",    type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Tugu MacArthur Jayapura",    type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertambangan Emas",          type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Honai",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Pisau Belati Papua",         type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Koteka",                     type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Tifa Papua",                 type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Musyoh",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Bakar Batu",                 type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Papeda Papua",               type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Noken",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Biak",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Papua Barat", cards: [
+                { name: "Gas Alam & Ikan Laut",       type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Tugu Jepang Manokwari",      type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perikanan & Migas",          type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Mod Aki Aksa",         type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Pisau Pabar",                type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Ewer",                       type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Tifa Pabar",                 type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Suanggi",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Wor",                        type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Ikan Bakar Manokwari",       type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Rumput Kebar",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Hatam",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Papua Barat Daya", cards: [
+                { name: "Ikan & Mutiara Sorong",      type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Pillbox",                    type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perikanan & Pariwisata",     type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Kambik",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Pisau Pabarday",             type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Boe",                        type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Tifa Pabarday",              type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Aluyen",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Injak Piring",               type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Ikan Kuah Kuning",           type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Anyaman Pandan Moi",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Moi",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Papua Pegunungan", cards: [
+                { name: "Hasil Hutan & Kopi",         type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Lembah Baliem",              type: "Tempat Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertanian Pegunungan",       type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Honai Pegunungan",     type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Pisau Peg",                  type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Yokal",                      type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Pikon",                      type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Selamat Datang",        type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Festival Lembah Baliem",     type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Udang Selingkuh",            type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Madu Wamena",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Dani",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Papua Selatan", cards: [
+                { name: "Kayu & Hasil Hutan",         type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Penjara Boven Digoel",       type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Kehutanan",                  type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Gotad",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Pisau Pasel",                type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Pummi",                      type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Tifa Pasel",                 type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Gatzi",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Yi Ha",                      type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Sagu Sep",                   type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Abon Daging Rusa Merauke",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Asmat",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Papua Tengah", cards: [
+                { name: "Emas & Hasil Hutan Pateng",  type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Kampung Tua Mosandurei",     type: "Tempat Bersejarah", rarity: "legendary", power: 9 },
+                { name: "Pertanian & Kehutanan",      type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Karapao",              type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Pisau Pateng",               type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Sali",                       type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Tifa Pateng",                type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Yuw",                   type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Bakar Batu Pateng",          type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Sagu Bakar",                 type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kopi Moanemani",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Mee",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Riau", cards: [
+                { name: "Minyak Bumi",                type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Istana Siak",                type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertambangan Minyak Riau",   type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Selaso Jatuh Kembar",  type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Pedang Jenawi",              type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Teluk Belanga",              type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Gambus",                     type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Zapin",                 type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Tepuk Tepung Tawar",         type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Gulai Belacan",              type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Bolu Kemojo",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Melayu Riau",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Sulawesi Barat", cards: [
+                { name: "Kakao & Kelapa Sulbar",      type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Istana Malaweg",             type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perkebunan Kakao",           type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Boyang",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Badik Sulbar",               type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Pattuqduq Towaine",          type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Kecapi Sulbar",              type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Patuddu",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Sayyang Pattu'du",           type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Bau Peapi",                  type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Sutra Mandar",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Mandar",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Sulawesi Selatan", cards: [
+                { name: "Nikel & Besi Sulsel",        type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Benteng Rotterdam",          type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertambangan Nikel Sulsel",  type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Tongkonan",            type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Badik",                      type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Baju Bodo",                  type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Kecapi Sulsel",              type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Kipas Pakarena",        type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Rambu Solo",                 type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Coto Makassar",              type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kopi Toraja",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Bugis",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Sulawesi Tengah", cards: [
+                { name: "Nikel & Emas Sulteng",       type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Masjid Tua Luwuk",           type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertambangan Nikel Sulteng", type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Tambi",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Pasatimpo",                  type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Koje",                       type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Ganda",                      type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Lumense",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Balia",                      type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Kaledo",                     type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Bawang Goreng Palu",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Kaili",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Sulawesi Tenggara", cards: [
+                { name: "Nikel & Aspal Buton",        type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Benteng Keraton Buton",      type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertambangan Aspal",         type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Istana Buton",         type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Keris Sultra",               type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Babu Nggawi",                type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Ladolado",                   type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Lulo",                  type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Posuo",                      type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Lapa-lapa",                  type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kacang Mete Kendari",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Tolaki",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Sulawesi Utara", cards: [
+                { name: "Kelapa & Cengkeh",           type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Benteng Moraya",             type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perikanan Laut Sulut",       type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Walewangko",           type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Keris Sulut",                type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Laku Tepu",                  type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Kolintang",                  type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Maengket",              type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Tulude",                     type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Bubur Manado",               type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Pala Siau",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Melayu Manado",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Sumatera Barat", cards: [
+                { name: "Gambir & Kulit Manis",       type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Jam Gadang",                 type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perdagangan Rempah",         type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Gadang",               type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Karih",                      type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Bundo Kanduang",             type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Saluang",                    type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Piring",                type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Batagak Penghulu",           type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Rendang",                    type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Songket Silungkang",          type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Minangkabau",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Sumatera Selatan", cards: [
+                { name: "Minyak & Gas Bumi",          type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Jembatan Ampera",            type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Pertambangan Minyak Sumsel", type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Limas",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Tombak Trisula",             type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Aesan Gede",                 type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Accordion Palembang",        type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Tanggai",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Nganggung",                  type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Pempek",                     type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kain Songket Palembang",     type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Melayu Palembang",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
+            { name: "Sumatera Utara", cards: [
+                { name: "Karet & Kelapa Sawit",       type: "Sumber Daya Alam",        rarity: "rarestar",      power: 6 },
+                { name: "Istana Maimun",              type: "Bangunan Bersejarah", rarity: "legendary",   power: 9 },
+                { name: "Perkebunan Sawit",           type: "Sektor Ekonomi",      rarity: "commonplus",    power: 2 },
+                { name: "Rumah Bolon",                type: "Rumah Adat",          rarity: "epic",        power: 8 },
+                { name: "Piso Gaja Dompak",           type: "Senjata Tradisional", rarity: "mythic",    power: 10 },
+                { name: "Ulos",                       type: "Pakaian Adat",        rarity: "magis",        power: 12 },
+                { name: "Gondang Sabangunan",         type: "Alat Musik",          rarity: "uncommon",    power: 4 },
+                { name: "Tari Tor-Tor",               type: "Tarian",              rarity: "uncommonplus",power: 3 },
+                { name: "Mangulosi",                  type: "Adat Istiadat",       rarity: "sakral",  power: 11 },
+                { name: "Bika Ambon",                 type: "Makanan Khas",        rarity: "common",      power: 1 },
+                { name: "Kain Ulos",                type: "Produk Unggulan",     rarity: "rareplus",      power: 7 },
+                { name: "Bahasa Batak Toba",                 type: "Bahasa Daerah",       rarity: "rare",       power: 5 },
+            ]},
 ];
 
 const ALL_CARDS = [];
@@ -510,26 +586,35 @@ function sanitizeName(name) {
     return name.trim().replace(/[\x00-\x1F\x7F]/g, '').slice(0, 30);
 }
 
+// [FIX] Label level bot — HARUS SAMA PERSIS dengan mapping di client (index.html)
+// supaya nama bot di lobi ("Bot 2 Level 3 (Sulit)") dan di dalam pertandingan
+// (player.name yang ditampilkan lewat getBotDisplayName()) identik.
+function getCustomBotLevelLabel(level) {
+    return level === 1 ? 'Mudah' : level === 2 ? 'Normal' : 'Sulit';
+}
+
 // =============================================
 // DRAW CARD LEVEL SYSTEM
 // =============================================
 const DRAW_RATES = {
-    1: { common: 22, commonplus: 16, uncommonplus: 13, uncommon: 11, rare: 10, rarestar: 9, rareplus: 8, epic: 6, legendary: 4, mythic: 1 },
-    2: { commonplus: 21, common: 16, uncommonplus: 15, uncommon: 13, rare: 11, rarestar: 10, rareplus: 7, epic: 4, legendary: 2, mythic: 1 },
-    3: { uncommonplus: 20, uncommon: 14, commonplus: 15, common: 13, rare: 12, rarestar: 11, rareplus: 8, epic: 4, legendary: 2, mythic: 1 },
-    4: { uncommon: 19, uncommonplus: 15, commonplus: 13, common: 11, rare: 13, rarestar: 12, rareplus: 9, epic: 5, legendary: 2, mythic: 1 },
-    5: { rare: 18, uncommon: 14, rarestar: 13, uncommonplus: 13, rareplus: 11, commonplus: 11, common: 10, epic: 8, legendary: 1, mythic: 1 },
-    6: { rarestar: 17, rare: 14, uncommon: 13, rareplus: 12, uncommonplus: 11, commonplus: 10, epic: 9, common: 9, legendary: 4, mythic: 1 },
-    7: { rareplus: 16, rarestar: 14, rare: 13, uncommon: 11, epic: 12, uncommonplus: 10, commonplus: 9, common: 8, legendary: 5, mythic: 2 },
-    8: { epic: 15, rareplus: 14, rarestar: 13, legendary: 11, rare: 11, uncommon: 10, uncommonplus: 9, commonplus: 8, common: 7, mythic: 2 },
-    9: { legendary: 17, epic: 13, rareplus: 12, rarestar: 11, rare: 10, uncommon: 9, uncommonplus: 8, commonplus: 7, common: 6, mythic: 7 },
-    10: { mythic: 20, legendary: 17, epic: 14, rareplus: 11, rarestar: 10, rare: 9, uncommon: 7, uncommonplus: 6, commonplus: 4, common: 2 }
+    1: { magis:1, sakral:2, mythic:3, legendary:4, epic:5, rareplus:6, rarestar:7, rare:8, uncommon:9, uncommonplus:11, commonplus:16, common:28 },
+    2: { magis:1, sakral:2, mythic:3, legendary:4, epic:5, rareplus:6, rarestar:7, rare:8, uncommon:10, uncommonplus:13, commonplus:22, common:19 },
+    3: { magis:1, sakral:2, mythic:3, legendary:4, epic:5, rareplus:6, rarestar:7, rare:9, uncommon:11, uncommonplus:20, commonplus:17, common:15 },
+    4: { magis:1, sakral:2, mythic:3, legendary:4, epic:5, rareplus:6, rarestar:8, rare:10, uncommon:19, uncommonplus:16, commonplus:14, common:12 },
+    5: { magis:1, sakral:2, mythic:3, legendary:4, epic:5, rareplus:6, rarestar:9, rare:18, uncommon:16, uncommonplus:14, commonplus:12, common:10 },
+    6: { magis:1, sakral:2, mythic:3, legendary:4, epic:6, rareplus:9, rarestar:18, rare:15, uncommon:13, uncommonplus:12, commonplus:10, common:7 },
+    7: { magis:1, sakral:2, mythic:3, legendary:5, epic:10, rareplus:17, rarestar:15, rare:13, uncommon:12, uncommonplus:9, commonplus:7, common:6 },
+    8: { magis:1, sakral:2, mythic:3, legendary:10, epic:18, rareplus:15, rarestar:13, rare:11, uncommon:9, uncommonplus:7, commonplus:6, common:5 },
+    9: { magis:1, sakral:5, mythic:10, legendary:18, epic:15, rareplus:13, rarestar:11, rare:8, uncommon:7, uncommonplus:6, commonplus:4, common:2 },
+    10: { magis:5, sakral:11, mythic:18, legendary:15, epic:13, rareplus:10, rarestar:8, rare:7, uncommon:6, uncommonplus:4, commonplus:2, common:1 },
+    11: { magis:10, sakral:19, mythic:15, legendary:13, epic:11, rareplus:8, rarestar:7, rare:6, uncommon:5, uncommonplus:3, commonplus:2, common:1 },
+    12: { magis:19, sakral:16, mythic:13, legendary:11, epic:10, rareplus:8, rarestar:7, rare:6, uncommon:4, uncommonplus:3, commonplus:2, common:1 }
 };
-const RARITY_ORDER = ['mythic','legendary','epic','rareplus','rarestar','rare','uncommon','uncommonplus','commonplus','common'];
-const LEVEL_NAMES = { 1:'Lv1', 2:'Lv2', 3:'Lv3', 4:'Lv4', 5:'Lv5', 6:'Lv6', 7:'Lv7', 8:'Lv8', 9:'Lv9', 10:'Lv10' };
+const RARITY_ORDER = ['magis','sakral','mythic','legendary','epic','rareplus','rarestar','rare','uncommon','uncommonplus','commonplus','common'];
+const LEVEL_NAMES = { 1:'Lv1', 2:'Lv2', 3:'Lv3', 4:'Lv4', 5:'Lv5', 6:'Lv6', 7:'Lv7', 8:'Lv8', 9:'Lv9', 10:'Lv10', 11:'Lv11', 12:'Lv12' };
 
 function calcDrawLevel(drawCount) {
-    return Math.min(drawCount + 1, 10);
+    return Math.min(drawCount + 1, 12);
 }
 
 // =============================================
@@ -861,7 +946,9 @@ class GameEngine {
             currentRoundPlays: [], roundHistory: [],
             winners: [], gameOver: false, surrenderCount: 0,
             drawTurnQueue: [], drawTurnIndex: 0, isProcessingDrawTurn: false, drawTurnActive: false,
-            isPaused: false
+            isPaused: false,
+            // [VOTING TAHAP 1] Hak jatuh kartu Tahap 1 saat tidak ada pemenang otomatis
+            votingActive: false, votingMode: null, votingParticipants: [], votingChoices: {}, votingRoundNum: 0
         };
         this.hostUserUid = null; // UID host custom room (yang bisa pause)
     }
@@ -872,8 +959,47 @@ class GameEngine {
         if (requestingUserUid !== this.hostUserUid) return { success: false, error: 'Hanya host yang dapat pause pertandingan.' };
         if (this.gs.gameOver) return { success: false, error: 'Pertandingan sudah selesai.' };
         this.gs.isPaused = !this.gs.isPaused;
+        this.gs.pausedBy = this.gs.isPaused ? 'host' : null; // [FIX] catat siapa yang menjeda, hindari tabrakan dgn pause voting
+        this._syncVotingDeadlineOnPauseToggle(); // [FIX] geser deadline voting kalau sedang berlangsung
         const action = this.gs.isPaused ? 'PAUSED' : 'RESUMED';
         this.broadcastLog(`${this.gs.isPaused ? '⏸️' : '▶️'} Pertandingan di${this.gs.isPaused ? 'jeda' : 'lanjutkan'} oleh host.`);
+        this.broadcastToAll({ type: 'GAME_PAUSE_STATE', isPaused: this.gs.isPaused, action });
+        this.broadcastGameState();
+        return { success: true, isPaused: this.gs.isPaused };
+    }
+
+    // Dipakai handlePause() & handleVotingPause(): kalau voting Tahap 1 sedang berlangsung saat
+    // status pause berubah, geser this.gs.votingDeadline sebesar durasi jeda — supaya "sisa waktu"
+    // voting benar-benar berhenti selama dijeda (bukan cuma tampilannya doang di client), dan begitu
+    // resume, sisa waktunya persis sama seperti sebelum dijeda alih-alih langsung auto-finalize.
+    _syncVotingDeadlineOnPauseToggle() {
+        if (!this.gs.votingActive) return;
+        if (this.gs.isPaused) {
+            this.gs.votingPausedAt = Date.now();
+        } else if (this.gs.votingPausedAt) {
+            this.gs.votingDeadline += (Date.now() - this.gs.votingPausedAt);
+            this.gs.votingPausedAt = null;
+        }
+    }
+
+    // ── PAUSE/RESUME VOTING (semua spectator, bukan cuma host — HANYA saat voting Tahap 1 aktif) ──
+    // Beda dari handlePause(): tidak dibatasi ke host, tapi cuma boleh dipakai selama gs.votingActive
+    // true. Memakai flag gs.isPaused yang sama supaya semua guard pause yang sudah ada (endRound,
+    // startPhase1/2, PLAY_CARD, dll) otomatis ikut berlaku.
+    handleVotingPause(requestingUserUid) {
+        if (!this.spectatorUserUids.includes(requestingUserUid)) return { success: false, error: 'Hanya penonton yang dapat menjeda voting.' };
+        if (!this.gs.votingActive) return { success: false, error: 'Jeda hanya tersedia selama voting Tahap 1 berlangsung.' };
+        if (this.gs.gameOver) return { success: false, error: 'Pertandingan sudah selesai.' };
+        // [FIX] Kalau match sedang dijeda OLEH HOST, jangan biarkan tombol voting ini
+        // ikut me-resume-nya (dulu keduanya berbagi 1 toggle boolean tanpa pembeda pengirim).
+        if (this.gs.isPaused && this.gs.pausedBy === 'host') {
+            return { success: false, error: 'Match sedang dijeda oleh host, tunggu host melanjutkan.' };
+        }
+        this.gs.isPaused = !this.gs.isPaused;
+        this.gs.pausedBy = this.gs.isPaused ? 'voting' : null;
+        this._syncVotingDeadlineOnPauseToggle(); // [FIX] geser deadline voting sebesar durasi jeda
+        const action = this.gs.isPaused ? 'PAUSED' : 'RESUMED';
+        this.broadcastLog(`${this.gs.isPaused ? '⏸️' : '▶️'} Voting di${this.gs.isPaused ? 'jeda' : 'lanjutkan'} oleh penonton.`);
         this.broadcastToAll({ type: 'GAME_PAUSE_STATE', isPaused: this.gs.isPaused, action });
         this.broadcastGameState();
         return { success: true, isPaused: this.gs.isPaused };
@@ -948,6 +1074,7 @@ class GameEngine {
     checkWin(player) {
         if (player.hand.length === 0 && !player.winner) {
             player.winner = true;
+            player.autoMode = false; // [FIX] indikator "Mode Otomatis" harus hilang begitu kartu pemain habis (menang)
             const takenRanks = new Set(this.gs.winners.map(w => w.rank));
             let rank = 1;
             while (takenRanks.has(rank)) rank++;
@@ -1071,7 +1198,15 @@ class GameEngine {
             chosen = pickByHighestRarity(matchingCards);
         } else {
             // ── TIDAK DAPAT KARTU SATU PROVINSI ──
-            const pool = nonMatchingCards.length > 0 ? nonMatchingCards : matchingCards;
+            const rawPool = nonMatchingCards.length > 0 ? nonMatchingCards : matchingCards;
+            // [FIX] 99.9% dari draw yang "tidak cocok" ini bakal utamakan provinsi yang BELUM
+            // ada di tangan PEMAIN/BOT INI SENDIRI (bukan pemain lain) — supaya kartu terus
+            // menyebar ke provinsi baru, tidak numpuk di provinsi yang sudah dipegang.
+            // Sisa 0.1% tetap boleh dapat provinsi yang sudah dipegang (elemen kejutan).
+            const ownedProvinces = new Set(player.hand.map(c => c.province));
+            const freshProvincePool = rawPool.filter(c => !ownedProvinces.has(c.province));
+            const useFreshProvince = freshProvincePool.length > 0 && Math.random() < 0.999;
+            const pool = useFreshProvince ? freshProvincePool : rawPool;
             // Prioritaskan rarity tertinggi dari pool non-matching sesuai level draw card
             chosen = pickByHighestRarity(pool);
         }
@@ -1089,7 +1224,7 @@ class GameEngine {
         }
         // ── Tentukan rarity tertinggi yang masih tersedia di drawPile (setelah kartu ini diambil) ──
         // Hierarki: mythic > legendary > epic > rareplus > rarestar > rare > uncommon > uncommonplus > commonplus > common
-        const RESET_HIERARCHY = ['mythic','legendary','epic','rareplus','rarestar','rare','uncommon','uncommonplus','commonplus','common'];
+        const RESET_HIERARCHY = ['magis','sakral','mythic','legendary','epic','rareplus','rarestar','rare','uncommon','uncommonplus','commonplus','common'];
         function getHighestAvailableRarity(drawPile) {
             const remaining = new Set(drawPile.map(c => c.rarity));
             for (const r of RESET_HIERARCHY) { if (remaining.has(r)) return r; }
@@ -1097,9 +1232,9 @@ class GameEngine {
         }
         const highestInPile = getHighestAvailableRarity(this.gs.drawPile);
         const shouldReset = (highestInPile !== null && chosen.rarity === highestInPile)
-                         || (highestInPile === null && level >= 10);
+                         || (highestInPile === null && level >= 12);
         if (shouldReset) {
-            const resetReason = highestInPile ? chosen.rarity.toUpperCase() : 'Lv10 (drawPile habis)';
+            const resetReason = highestInPile ? chosen.rarity.toUpperCase() : 'Lv12 (drawPile habis)';
             player.drawLevel = 1;
             player.drawCount = 0;
             player.drawProb = 0;
@@ -1124,14 +1259,26 @@ class GameEngine {
 
         this.gs.players.forEach(player => {
             const usedRarities = new Set(); // rarity yang sudah dipegang pemain ini
+            const usedProvinces = new Set(); // [FIX] provinsi yang sudah dipegang pemain ini — cegah 2 kartu dari provinsi yang sama
 
             for (const targetRarity of DEAL_RARITIES) {
                 // Ambil semua kartu di drawPile dengan rarity ini yang belum dimiliki pemain lain
-                const candidates = this.gs.drawPile.filter(c => c.rarity === targetRarity);
+                const candidatesAll = this.gs.drawPile.filter(c => c.rarity === targetRarity);
 
-                if (candidates.length === 0) {
+                if (candidatesAll.length === 0) {
                     console.error(`❌ startGame: tidak ada kartu rarity "${targetRarity}" tersisa untuk ${player.name}`);
                     continue;
+                }
+
+                // [FIX] Utamakan kartu dari provinsi yang BELUM dipegang pemain ini, supaya
+                // 8 kartu awal semuanya dari provinsi berbeda-beda (tidak ada yang dobel).
+                // Kalau ternyata semua kandidat rarity ini kebetulan dari provinsi yang sudah
+                // dipegang (jarang terjadi, biasanya karena provinsi yang dipilih sedikit),
+                // baru longgarkan aturan ini supaya pemain tetap dapat 8 kartu penuh.
+                const candidatesUniqueProv = candidatesAll.filter(c => !usedProvinces.has(c.province));
+                const candidates = candidatesUniqueProv.length > 0 ? candidatesUniqueProv : candidatesAll;
+                if (candidatesUniqueProv.length === 0) {
+                    console.warn(`⚠️ startGame: tidak ada kartu rarity "${targetRarity}" dari provinsi baru untuk ${player.name} — pakai provinsi yang sudah ada.`);
                 }
 
                 // Pilih acak dari kandidat yang ada
@@ -1139,6 +1286,7 @@ class GameEngine {
                 this.gs.drawPile.splice(this.gs.drawPile.indexOf(chosen), 1);
                 player.hand.push(chosen);
                 usedRarities.add(targetRarity);
+                usedProvinces.add(chosen.province);
                 this.updatePower(player);
             }
         });
@@ -1156,6 +1304,10 @@ class GameEngine {
         this.gs.forcePickMode = false; this.gs.forcePickPlayers = [];
         this.gs.forcePickProcessing = false; this.gs.isHandlingForcePick = false;
         this.gs.drawTurnQueue = []; this.gs.drawTurnIndex = 0; this.gs.drawTurnActive = false; this.gs.isProcessingDrawTurn = false;
+        // [VOTING TAHAP 1] Reset state voting hak jatuh kartu Tahap 1 setiap ronde baru
+        if (this._votingTimer) { clearTimeout(this._votingTimer); this._votingTimer = null; }
+        this.gs.votingActive = false; this.gs.votingMode = null;
+        this.gs.votingParticipants = []; this.gs.votingChoices = {}; this.gs.votingRoundNum = 0;
         this.gs.players.forEach(p => {
             p.hasPlayed = false; p.mustDraw = false; p.mustForcePick = false;
             p.freed = false; p.isProcessingAction = false;
@@ -1167,8 +1319,9 @@ class GameEngine {
         setTimeout(() => { this.gs.isStartingPhase = false; }, 100);
         this.logDrawLevels();
         if (this.gs.round === 1) {
+            // [VOTING TAHAP 1] Ronde pertama: belum ada riwayat, semua pemain aktif berhak → voting
             this.broadcastGameState();
-            setTimeout(() => this.systemPlayPhase1(), 800);
+            setTimeout(() => this.startPhase1Voting(), 800);
             return;
         }
         const lastRound = this.gs.roundHistory[this.gs.roundHistory.length - 1];
@@ -1179,17 +1332,242 @@ class GameEngine {
             return p && !p.winner;
         });
         if (validPlays.length === 0) {
+            // [VOTING TAHAP 1] Tidak ada yang "berhak" dari ronde lalu → voting antar pemain aktif
             this.broadcastGameState();
-            setTimeout(() => this.systemPlayPhase1(), 800);
+            setTimeout(() => this.startPhase1Voting(), 800);
             return;
         }
         validPlays.sort((a, b) => b.power - a.power);
         const phase1Player = this.gs.players.find(p => p.id === validPlays[0].playerId);
         if (!phase1Player || phase1Player.winner) {
+            // [VOTING TAHAP 1] Pemenang power tertinggi ronde lalu sudah tidak valid → voting
             this.broadcastGameState();
-            setTimeout(() => this.systemPlayPhase1(), 800);
+            setTimeout(() => this.startPhase1Voting(), 800);
             return;
         }
+        this.assignPhase1Player(phase1Player);
+    }
+
+    // ======================= VOTING SISTEM HAK TAHAP 1 =======================
+    // Menggantikan pengambilalihan otomatis oleh sistem ("Sistem menjatuhkan...").
+    // Ketika tidak ada satu pun pemain yang "berhak" main duluan di Tahap 1, hak itu
+    // diperebutkan lewat voting: Kartu Hitam/Putih (≥3 peserta, suara lebih sedikit menang &
+    // lanjut ke ronde berikutnya, mayoritas tersingkir) atau Suit Gunting-Batu-Kertas
+    // (persis 2 peserta). Seri → voting/suit diulang. Hasil akhir menyisakan 1 pemenang.
+
+    startPhase1Voting() {
+        const eligible = this.getActivePlayers().filter(p => !p.leftMatch);
+        if (eligible.length === 0) { this.systemPlayPhase1(); return; }
+        this.gs.votingRoundNum = 0;
+        this.runVotingRound(eligible.map(p => p.id));
+    }
+
+    runVotingRound(participantIds) {
+        // Saring ulang: hanya pemain yang masih aktif (jaga-jaga race condition disconnect/menang)
+        participantIds = participantIds.filter(id => {
+            const p = this.gs.players.find(pp => pp.id === id);
+            return p && !p.winner && !p.leftMatch;
+        });
+        if (this.gs.gameOver) return;
+        if (participantIds.length === 0) { this.systemPlayPhase1(); return; }
+        if (participantIds.length === 1) { this.grantPhase1Right(participantIds[0]); return; }
+
+        this.gs.votingRoundNum++;
+        const mode = participantIds.length === 2 ? 'suit' : 'card';
+        this.gs.votingActive = true;
+        this.gs.votingMode = mode;
+        this.gs.votingParticipants = participantIds;
+        this.gs.votingChoices = {};
+        // [FIX] Simpan deadline eksplisit (bukan cuma delay 10000ms sekali jalan) supaya bisa
+        // digeser saat pause/resume — lihat handlePause()/handleVotingPause() yang menggeser
+        // this.gs.votingDeadline sebesar durasi jeda, dan checkVotingTimeout() di bawah yang
+        // membaca ulang sisa waktu dari deadline ini (bukan dari timer 10 detik yang kaku).
+        this.gs.votingDeadline = Date.now() + 10000;
+        this.gs.votingPausedAt = null;
+
+        const names = participantIds.map(id => this.gs.players.find(p => p.id === id)?.name).filter(Boolean);
+        this.broadcastLog(mode === 'suit'
+            ? `✊✋✌️ Voting Suit (Ronde ${this.gs.votingRoundNum}) antara ${names.join(' vs ')} untuk hak jatuh kartu Tahap 1!`
+            : `🗳️ Voting Kartu Hitam/Putih (Ronde ${this.gs.votingRoundNum}) antara ${names.join(', ')} untuk hak jatuh kartu Tahap 1!`);
+
+        this.broadcastToAll({
+            type: 'VOTING_START',
+            mode,
+            roundNum: this.gs.votingRoundNum,
+            duration: 10000,
+            serverNow: Date.now(),
+            participants: participantIds.map(id => {
+                const p = this.gs.players.find(pp => pp.id === id);
+                return { id: p.id, name: p.name, isBot: p.isBot };
+            })
+        });
+        this.broadcastGameState();
+
+        // Bot langsung memilih otomatis & acak. Di mode Ranked, delay dibuat ACAK supaya
+        // terasa natural/tersamarkan seolah-olah player asli. Di mode Tantang, penyamaran
+        // tidak relevan (pemain sendiri yang masukin bot), jadi delay dibuat TETAP
+        // (bukan acak) — cuma dijeda bertahap per bot biar tidak numpuk di log/UI.
+        const _votingRoundTokenForBots = this.gs.votingRoundNum;
+        let _votingBotIdx = 0;
+        participantIds.forEach(id => {
+            const p = this.gs.players.find(pp => pp.id === id);
+            if (p && p.isBot) {
+                const delay = this.isCustomRoom
+                    ? 500 + (_votingBotIdx++) * 500   // Tantang: tetap, jeda 0.5 detik per bot
+                    : 1000 + Math.floor(Math.random() * 3000); // Ranked: acak 1-4 detik (samarkan)
+                const _doBotVote = () => {
+                    // [FIX] recordVoteChoice() sekarang menolak total selama dijeda (bukan cuma
+                    // menahan reveal) — jadi timer bot ini WAJIB coba lagi sendiri saat resume,
+                    // kalau tidak bot itu jadi tidak pernah memilih sama sekali.
+                    if (this.gs.isPaused) { setTimeout(_doBotVote, 1000); return; }
+                    if (!this.gs.votingActive || this.gs.votingRoundNum !== _votingRoundTokenForBots) return; // ronde sudah lewat
+                    this.recordVoteChoice(id, this.randomVoteChoice(mode));
+                };
+                setTimeout(_doBotVote, delay);
+            }
+        });
+
+        // Batas waktu voting: 10 detik. Token ronde mencegah timer basi (stale) menembak ronde berikutnya.
+        // [FIX] Sekarang membaca sisa waktu dari this.gs.votingDeadline (bisa digeser saat pause/resume)
+        // alih-alih delay 10000ms yang kaku dan tidak tahu-menahu soal jeda.
+        if (this._votingTimer) clearTimeout(this._votingTimer);
+        const thisRoundToken = this.gs.votingRoundNum;
+        const checkVotingTimeout = () => {
+            if (!this.gs.votingActive || this.gs.votingRoundNum !== thisRoundToken) return;
+            if (this.gs.isPaused) { this._votingTimer = setTimeout(checkVotingTimeout, 500); return; } // tunggu resume
+            const remainMs = this.gs.votingDeadline - Date.now();
+            if (remainMs <= 0) { this.finalizeVotingRound(); return; }
+            this._votingTimer = setTimeout(checkVotingTimeout, Math.min(remainMs, 1000));
+        };
+        this._votingTimer = setTimeout(checkVotingTimeout, 1000);
+    }
+
+    randomVoteChoice(mode) {
+        return mode === 'suit'
+            ? ['batu', 'gunting', 'kertas'][Math.floor(Math.random() * 3)]
+            : (Math.random() < 0.5 ? 'putih' : 'hitam');
+    }
+
+    // Dipanggil dari message handler saat client kirim { type:'VOTE_CHOICE', choice }
+    handleVoteChoice(playerId, choice) {
+        if (!this.gs.votingActive) return;
+        if (this.gs.isPaused) return; // [FIX] jangan terima klik vote pemain manusia selama dijeda
+        if (!this.gs.votingParticipants.includes(playerId)) return;
+        this.recordVoteChoice(playerId, choice);
+    }
+
+    recordVoteChoice(playerId, choice) {
+        if (!this.gs.votingActive) return;
+        if (this.gs.isPaused) return; // [FIX] jangan rekam pilihan sama sekali selama dijeda (bot pakai retry sendiri, lihat runVotingRound)
+        if (this.gs.votingChoices[playerId]) return; // sudah memilih, tidak boleh ganti pilihan
+        const validChoices = this.gs.votingMode === 'suit' ? ['batu', 'gunting', 'kertas'] : ['putih', 'hitam'];
+        if (!validChoices.includes(choice)) return;
+        this.gs.votingChoices[playerId] = choice;
+
+        // Kirim progres TANPA membocorkan pilihan — cuma daftar id yang sudah memilih (slot jadi "terisi tapi tertutup")
+        this.broadcastToAll({ type: 'VOTING_PROGRESS', votedIds: Object.keys(this.gs.votingChoices) });
+
+        // Kalau semua peserta sudah memilih, langsung selesaikan tanpa menunggu sisa waktu 10 detik
+        if (Object.keys(this.gs.votingChoices).length >= this.gs.votingParticipants.length) {
+            if (this._votingTimer) { clearTimeout(this._votingTimer); this._votingTimer = null; }
+            // [FIX] Kalau sedang dijeda, JANGAN langsung finalize/reveal hasil voting — tunggu resume
+            // dulu (cek ulang tiap 1 detik). Sebelumnya reveal tetap jalan meski status "dijeda".
+            if (this.gs.isPaused) {
+                const _waitResumeThenFinalize = () => {
+                    if (this.gs.isPaused) { setTimeout(_waitResumeThenFinalize, 1000); return; }
+                    this.finalizeVotingRound();
+                };
+                _waitResumeThenFinalize();
+                return;
+            }
+            this.finalizeVotingRound();
+        }
+    }
+
+    finalizeVotingRound() {
+        if (!this.gs.votingActive) return;
+        const participantIds = this.gs.votingParticipants;
+        const mode = this.gs.votingMode;
+
+        // Siapa pun yang belum memilih setelah 10 detik → dipilihkan acak oleh sistem, dihitung sebagai pilihan mereka
+        participantIds.forEach(id => {
+            if (!this.gs.votingChoices[id]) this.gs.votingChoices[id] = this.randomVoteChoice(mode);
+        });
+
+        const choicesSnapshot = { ...this.gs.votingChoices };
+        this.gs.votingActive = false;
+
+        this.broadcastToAll({ type: 'VOTING_REVEAL', mode, choices: choicesSnapshot });
+
+        if (mode === 'suit') this.resolveSuitRound(participantIds, choicesSnapshot);
+        else this.resolveCardRound(participantIds, choicesSnapshot);
+    }
+
+    resolveCardRound(participantIds, choices) {
+        const white = participantIds.filter(id => choices[id] === 'putih');
+        const black = participantIds.filter(id => choices[id] === 'hitam');
+
+        // Seri jika: salah satu kelompok kosong (semua orang pilih sama), atau jumlah kedua kelompok sama
+        const isTie = white.length === 0 || black.length === 0 || white.length === black.length;
+        if (isTie) {
+            this.broadcastLog(`⚖️ Voting seri (Putih ${white.length} - Hitam ${black.length})! Voting diulang...`);
+            setTimeout(() => { if (!this.gs.gameOver) this.runVotingRound(participantIds); }, 2200);
+            return;
+        }
+
+        // Kelompok dengan suara lebih sedikit menang & lanjut ke ronde voting berikutnya; kelompok suara terbanyak tersingkir
+        const winners = white.length < black.length ? white : black;
+        const winnerLabel = white.length < black.length ? 'Putih' : 'Hitam';
+        const loserLabel = white.length < black.length ? 'Hitam' : 'Putih';
+        const winnerNames = winners.map(id => this.gs.players.find(p => p.id === id)?.name).filter(Boolean).join(', ');
+        this.broadcastLog(`✅ Kelompok ${winnerLabel} (suara lebih sedikit: ${winners.length}) menang! ${winnerNames} lanjut. Kelompok ${loserLabel} tersingkir.`);
+        setTimeout(() => { if (!this.gs.gameOver) this.runVotingRound(winners); }, 2200);
+    }
+
+    resolveSuitRound(participantIds, choices) {
+        const [aId, bId] = participantIds;
+        const a = choices[aId], b = choices[bId];
+        const beats = { batu: 'gunting', gunting: 'kertas', kertas: 'batu' };
+
+        if (a === b) {
+            this.broadcastLog(`⚖️ Suit seri (${a} vs ${b})! Suit diulang...`);
+            setTimeout(() => { if (!this.gs.gameOver) this.runVotingRound(participantIds); }, 2200);
+            return;
+        }
+        const winnerId = beats[a] === b ? aId : bId;
+        const winnerName = this.gs.players.find(p => p.id === winnerId)?.name;
+        this.broadcastLog(`✅ ${winnerName} menang suit (${a} vs ${b})! Dapat hak jatuh kartu Tahap 1.`);
+        setTimeout(() => { if (!this.gs.gameOver) this.grantPhase1Right(winnerId); }, 1500);
+    }
+
+    grantPhase1Right(playerId) {
+        this.gs.votingActive = false;
+        this.gs.votingMode = null;
+        this.gs.votingParticipants = [];
+        this.gs.votingChoices = {};
+        this.broadcastToAll({ type: 'VOTING_END' });
+
+        const phase1Player = this.gs.players.find(p => p.id === playerId);
+        if (!phase1Player || phase1Player.winner || phase1Player.leftMatch) {
+            // [FIX] Sebelumnya di sini langsung fallback ke systemPlayPhase1() (ambil kartu acak,
+            // tanpa memberi hak ke siapapun) — tidak konsisten dengan skenario "menyerah SETELAH
+            // pegang hak" yang sudah benar melakukan voting ulang (lihat handleSurrender()).
+            // Sekarang: kalau masih ada pemain aktif tersisa, voting ULANG di antara mereka dulu;
+            // systemPlayPhase1() cuma dipakai sebagai jaring pengaman terakhir kalau sudah tidak
+            // ada satupun pemain aktif tersisa (mis. semua sudah menang/keluar).
+            const eligible = this.getActivePlayers().filter(p => !p.leftMatch);
+            if (eligible.length > 0) {
+                this.startPhase1Voting();
+            } else {
+                this.systemPlayPhase1();
+            }
+            return;
+        }
+        this.assignPhase1Player(phase1Player);
+    }
+
+    // Diekstrak dari logika lama startPhase1() supaya bisa dipakai ulang oleh grantPhase1Right()
+    assignPhase1Player(phase1Player) {
         this.gs.phase1Player = phase1Player.id;
         this.broadcastLog(`🎯 👤 ${phase1Player.name} mendapat giliran Tahap 1!`);
         if (phase1Player.isBot) {
@@ -1206,6 +1584,8 @@ class GameEngine {
         }
     }
 
+    // Fallback darurat murni (dipertahankan sebagai jaring pengaman terakhir bila voting
+    // benar-benar tidak mungkin dijalankan, misal semua peserta hilang di tengah proses)
     systemPlayPhase1() {
         if (this.gs.isPaused) { setTimeout(() => this.systemPlayPhase1(), 1000); return; }
         let card;
@@ -1234,7 +1614,7 @@ class GameEngine {
         let card;
 
         // Helper: cek apakah kartu termasuk legend/mythic
-        const isHighRarity = (c) => c.rarity === 'legendary' || c.rarity === 'mythic';
+        const isHighRarity = (c) => c.rarity === 'magis' || c.rarity === 'sakral' || c.rarity === 'legendary' || c.rarity === 'mythic';
         // Helper: cek apakah kartu termasuk epic ke atas
         const isEpicOrHigher = (c) => ['epic','rareplus','rarestar','rare','uncommon','uncommonplus','commonplus','common'].indexOf(c.rarity) === -1
             ? false : ['epic'].includes(c.rarity) || isHighRarity(c);
@@ -1289,24 +1669,89 @@ class GameEngine {
 
             const opponents3 = this.gs.players.filter(p => p.id !== bot.id && !p.winner);
 
+            // [FIX] Strategi ofensif (Pancingan, Force Draw, Solo Province) HANYA menyasar
+            // lawan yang BUKAN sesama Bot Level 3 — yaitu Bot Level 1/2 atau pemain asli.
+            // Kalau lawannya sesama Bot Level 3, jangan dijadikan target strategi menyerang
+            // (main defensif/apa adanya seperti Level 2 terhadap lawan sesama Level 3 itu).
+            // Block Win TETAP berlaku ke SEMUA lawan (termasuk sesama Lv3) karena itu bukan
+            // "menyerang" — mencegah siapapun menang itu wajib selalu aktif.
+            const attackableOpps3 = opponents3.filter(p => !(p.isBot && (p.botLevel ?? 1) === 3));
+
             // ── Pengecekan kondisi (dilakukan setiap saat) ──
-            const allOppProvinces3 = new Set(opponents3.flatMap(p => p.hand.map(c => c.province)));
+            const allOppProvinces3 = new Set(attackableOpps3.flatMap(p => p.hand.map(c => c.province)));
             const dpIsEmpty3       = this.gs.drawPile.length === 0;
-            // Skip force draw jika: draw pile kosong ATAU (SEMUA lawan drawLevel > 5 DAN stok rare-common habis)
-            const hasHighDrawOpp3  = opponents3.every(p => (p.drawLevel ?? 1) > 5);
+            // Skip force draw jika: draw pile kosong ATAU tidak ada lawan yang boleh diserang
+            // ATAU (SEMUA lawan yang boleh diserang drawLevel > 6 DAN stok rare-common habis)
+            // [FIX] attackableOpps3.length === 0 wajib dicek eksplisit — kalau tidak, .every()
+            // pada array kosong otomatis bernilai true (vacuous truth), bisa salah kesimpulan.
+            const hasHighDrawOpp3  = attackableOpps3.length > 0 && attackableOpps3.every(p => (p.drawLevel ?? 1) > 6);
             const lowRarities3     = new Set(['common','commonplus','uncommonplus','uncommon','rare','rarestar','rareplus']);
             const lowStockHabis3   = !this.gs.drawPile.some(c => lowRarities3.has(c.rarity));
-            const skipForceDraw3   = dpIsEmpty3 || (hasHighDrawOpp3 && lowStockHabis3);
+            const skipForceDraw3   = dpIsEmpty3 || attackableOpps3.length === 0 || (hasHighDrawOpp3 && lowStockHabis3);
 
-            // ── PRIORITAS 1: Block win (hanya aktif saat 1vs1 — lawan aktif tinggal 1 orang) ──
+            // ── PRIORITAS 1: Block win ──
+            // [FIX] Sebelumnya cuma aktif saat 1v1 ketat (opponents3.length === 1), jadi kalau
+            // ada 3+ pemain aktif, Block Win TIDAK PERNAH aktif walau ada lawan yang tinggal
+            // 1 kartu — celah ini bisa bikin Level 3 kalah dari Level 2 (yang blocknya sudah
+            // berlaku di jumlah pemain berapapun). Sekarang disamakan: cari SIAPAPUN lawan
+            // yang tinggal 1 kartu, tidak peduli total lawan aktif ada berapa.
             const topCard3      = this.gs.topCard[0];
-            const isOneVsOne3   = opponents3.length === 1;
-            const nearWinOpp3   = (isOneVsOne3 && topCard3) ? opponents3.find(p => p.hand.length === 1) : null;
-            const blockCard3    = nearWinOpp3 && topCard3
-                ? [...bot.hand].filter(c => c.power > topCard3.power).sort((a, b) => a.power - b.power)[0]
+            // [FIX] Block Win cuma berlaku ke lawan yang boleh diserang (Bot Lv1/2 atau
+            // pemain asli) — sesama Bot Level 3 TIDAK diblokir, dibiarkan menang kalau bisa.
+            const nearWinOpp3   = topCard3 ? attackableOpps3.find(p => p.hand.length === 1) : null;
+            // [FIX KRITIS] Logika lama cuma bandingkan power vs topCard3 (kartu leftover yang
+            // TIDAK terkait dengan kartu terakhir lawan), tanpa cek provinsi sama sekali. Karena
+            // checkWin() cuma peduli "kartu di tangan habis" (power tidak berpengaruh), main dari
+            // provinsi YANG SAMA dengan kartu terakhir lawan — walau power lebih besar — justru
+            // MENJAMIN lawan bisa matching dan menang, bukan memblokir!
+            // Blocking yang benar: hindari provinsi kartu terakhir lawan sepenuhnya, supaya lawan
+            // tidak bisa matching apapun (dipaksa draw/force-pick). Karena provinsi lain apapun
+            // powernya sudah otomatis "aman", langsung ambil yang power TERKECIL (paling irit).
+            const blockCard3    = nearWinOpp3
+                ? [...bot.hand].filter(c => c.province !== nearWinOpp3.hand[0].province).sort((a, b) => a.power - b.power)[0]
                 : null;
 
-            // ── PRIORITAS 2: Force Draw (dicek setiap saat) ──
+            // ── PRIORITAS 2: Pancingan ──
+            // Kalau SEMUA kartu lawan di suatu provinsi punya power >= 8 (tidak ada kartu kecil
+            // buat dia "kabur"/dodge), bot jatuhkan kartu TERKECIL miliknya dari provinsi yang
+            // sama. Lawan dijamin terpaksa korbankan MINIMAL kartu terkecilnya di antara pilihan
+            // yang tersisa (belum tentu kartu terbesarnya — dia tetap boleh pilih yang paling
+            // kecil di antara yang >=8 itu). Berlaku baik lawan punya 1 kartu maupun banyak kartu
+            // di provinsi itu, selama tidak ada satupun yang <8 (kalau ada, lawan bisa dodge pakai itu).
+            let baitCard3 = null;
+            if (!blockCard3) {
+                const botProvinces3 = [...new Set(bot.hand.map(c => c.province))];
+                let bestBait3 = null; // simpan kandidat dengan selisih power (gain) terbesar
+                botProvinces3.forEach(prov => {
+                    const botCardsInProv3 = bot.hand.filter(c => c.province === prov);
+                    const botSmallestInProv3 = [...botCardsInProv3].sort((a, b) => a.power - b.power)[0];
+                    // [FIX] Cuma lawan yang boleh diserang (bukan sesama Bot Level 3) yang
+                    // dijadikan target Pancingan.
+                    attackableOpps3.forEach(opp => {
+                        // [FIX KRITIS] JANGAN PERNAH mancing lawan yang tinggal 1 kartu di tangan —
+                        // Block Win cuma aktif saat 1v1 ketat, tapi bahaya "lawan menang kalau
+                        // kartu terakhirnya dipaksa keluar" berlaku di SEMUA jumlah pemain (2, 3, 4+).
+                        // Tanpa pengecualian ini, Pancingan bisa tidak sengaja memaksa lawan yang
+                        // hampir menang untuk benar-benar menang (bertolak belakang dengan tujuannya).
+                        // [FIX] Diperluas jadi <=4 kartu (bukan cuma tepat 1) — kalau kartu lawan
+                        // sudah tinggal sedikit (endgame), Pancingan di-skip sepenuhnya untuk lawan itu.
+                        if (opp.hand.length <= 4) return;
+                        const oppCardsInProv3 = opp.hand.filter(c => c.province === prov);
+                        if (oppCardsInProv3.length === 0) return; // lawan tidak punya kartu di provinsi ini
+                        const oppMinPowerInProv3 = Math.min(...oppCardsInProv3.map(c => c.power));
+                        if (oppMinPowerInProv3 < 8) return; // ada kartu kecil buat lawan dodge, jangan mancing
+                        if (oppMinPowerInProv3 > botSmallestInProv3.power) {
+                            const gain3 = oppMinPowerInProv3 - botSmallestInProv3.power;
+                            if (!bestBait3 || gain3 > bestBait3.gain) {
+                                bestBait3 = { card: botSmallestInProv3, gain: gain3 };
+                            }
+                        }
+                    });
+                });
+                if (bestBait3) baitCard3 = bestBait3.card;
+            }
+
+            // ── PRIORITAS 3: Force Draw (dicek setiap saat) ──
             // Utamakan kartu uncommon/common dari provinsi yang tidak dimiliki lawan.
             // Jika tidak ada uncommon/common unik, boleh pakai kartu lain HANYA JIKA
             // kartu terkecil bot memang bukan uncommon/common (misal terkecilnya epic).
@@ -1323,7 +1768,7 @@ class GameEngine {
             const skipForceDrawFinal3  = skipForceDraw3 || botHandCount3 <= 2 || botCanWinRound3;
 
             let forceDrawCard3 = null;
-            if (!blockCard3 && !skipForceDrawFinal3) {
+            if (!blockCard3 && !baitCard3 && !skipForceDrawFinal3) {
                 const ucRarities3  = new Set(['common','commonplus','uncommonplus','uncommon']);
                 // Kandidat: kartu yang provinsinya tidak dimiliki lawan (semua rarity)
                 const uniqueCands3 = bot.hand.filter(c => !allOppProvinces3.has(c.province));
@@ -1345,7 +1790,7 @@ class GameEngine {
                 }
             }
 
-            // ── PRIORITAS 3: Solo Province (hanya saat draw pile habis) ──
+            // ── PRIORITAS 4: Solo Province (hanya saat draw pile habis) ──
             // Jika tidak ada lawan yang punya kartu dari provinsi yang sama dengan kartu bot,
             // jatuhkan kartu dari provinsi itu untuk memaksa lawan force pick dari top card.
             // SKIP jika:
@@ -1354,7 +1799,7 @@ class GameEngine {
             // Pilih kartu dengan power TERKECIL (utamakan common/uncommon),
             // boleh jatuhkan Mythic sampai Rare★ HANYA jika kartu itu memang power terkecil yang dimiliki.
             let soloProvinceCard3 = null;
-            if (!blockCard3 && dpIsEmpty3 && botHandCount3 > 3) {
+            if (!blockCard3 && !baitCard3 && dpIsEmpty3 && botHandCount3 > 3 && attackableOpps3.length > 0) {
                 const botProvincesOwned3 = new Set(bot.hand.map(c => c.province));
                 const soloProvinces3 = [...botProvincesOwned3].filter(prov => !allOppProvinces3.has(prov));
                 if (soloProvinces3.length > 0) {
@@ -1372,7 +1817,7 @@ class GameEngine {
                 }
             }
 
-            // ── PRIORITAS 4: Fallback sama dengan lv2 (terkecil-kedua aman) ──
+            // ── PRIORITAS 5: Fallback sama dengan lv2 (terkecil-kedua aman) ──
             const oneCardOpps3     = opponents3.filter(p => p.hand.length === 1);
             const dangerProvinces3 = new Set(oneCardOpps3.flatMap(p => p.hand.map(c => c.province)));
             const safeCards3       = dangerProvinces3.size > 0
@@ -1392,15 +1837,17 @@ class GameEngine {
 
             // ── Prioritas final ──
             const _usedBlock3      = !!blockCard3;
-            const _usedForceDraw3  = !_usedBlock3 && !!forceDrawCard3;
-            const _usedSoloProv3   = !_usedBlock3 && !_usedForceDraw3 && !!soloProvinceCard3;
+            const _usedBait3       = !_usedBlock3 && !!baitCard3;
+            const _usedForceDraw3  = !_usedBlock3 && !_usedBait3 && !!forceDrawCard3;
+            const _usedSoloProv3   = !_usedBlock3 && !_usedBait3 && !_usedForceDraw3 && !!soloProvinceCard3;
 
             card = _usedBlock3     ? blockCard3
+                 : _usedBait3      ? baitCard3
                  : _usedForceDraw3 ? forceDrawCard3
                  : _usedSoloProv3  ? soloProvinceCard3
                  : (secondWeakest3 ?? [...bot.hand].sort((a, b) => a.power - b.power)[0]);
 
-            bot._lv3flags = { usedBlock: _usedBlock3, usedForceDraw: _usedForceDraw3, usedSoloProv: _usedSoloProv3 };
+            bot._lv3flags = { usedBlock: _usedBlock3, usedBait: _usedBait3, usedForceDraw: _usedForceDraw3, usedSoloProv: _usedSoloProv3 };
         }
         this.gs.currentProvince = card.province;
         this.gs.topCard = [card];
@@ -1416,6 +1863,7 @@ class GameEngine {
             const flags   = bot._lv3flags ?? {};
             bot._lv3flags = undefined;
             if (flags.usedBlock)          strategyNote = ' [Lv3: block-win]';
+            else if (flags.usedBait)      strategyNote = ' [Lv3: pancingan]';
             else if (flags.usedForceDraw) strategyNote = ' [Lv3: force-draw-unik]';
             else if (flags.usedSoloProv)  strategyNote = ' [Lv3: solo-provinsi(dpHabis)]';
             else                          strategyNote = ' [Lv3: terkecil-kedua]';
@@ -1534,23 +1982,20 @@ class GameEngine {
 
     // Bot yang punya kartu cocok langsung jatuhkan kartu terbaik
     botPlayMatchingCard(bot) {
+        if (this.gs.isPaused) { setTimeout(() => this.botPlayMatchingCard(bot), 1000); return; } // [FIX] jangan main kartu saat dijeda
         if (bot.hasPlayed || bot.mustDraw) return;
         const matching = bot.hand.filter(c => c.province === this.gs.currentProvince);
         if (matching.length === 0) return;
         const level = bot.botLevel ?? 1;
-        // Block win untuk level 2 dan 3: jika lawan tinggal 1 kartu di tangan dan sudah jatuhkan kartu
-        // Lv3: hanya aktif saat 1vs1 (lawan aktif tinggal 1 orang)
-        const topCardNow = this.gs.topCard[this.gs.topCard.length - 1];
-        const activeOppsP2 = this.gs.players.filter(p => p.id !== bot.id && !p.winner);
-        const isOneVsOneP2 = activeOppsP2.length === 1;
-        const nearWinOppP2 = (level >= 2 && topCardNow && (level < 3 || isOneVsOneP2))
-            ? this.gs.players.find(p => p.id !== bot.id && !p.winner && p.hand.length === 1)
-            : null;
+        // [FIX] Logika "block win" versi Fase 2 (main kartu power lebih besar dari topCard)
+        // DIHAPUS — provinsi ronde ini SUDAH ditentukan duluan (bisa oleh pemain lain), jadi
+        // kalau lawan yang tinggal 1 kartu kebetulan punya kartu matching untuk provinsi ini,
+        // dia WAJIB mainkan (aturan wajib main kalau matching) dan otomatis menang — power
+        // kartu bot sama sekali tidak berpengaruh ke hasil itu (checkWin cuma cek kartu habis,
+        // bukan power). Blocking yang benar-benar efektif cuma bisa terjadi di Fase 1 (saat
+        // provinsi ronde masih bisa dipilih/dihindari), sudah ditangani di botPlayPhase1().
         let sorted;
-        if (nearWinOppP2 && topCardNow) {
-            const blockables = [...matching].filter(c => c.power > topCardNow.power).sort((a, b) => a.power - b.power);
-            sorted = blockables.length > 0 ? blockables : [...matching].sort((a, b) => a.power - b.power);
-                } else if (level >= 3) {
+        if (level >= 3) {
             // Lv3 Phase 2: jatuhkan kartu matching dengan power terkecil
             sorted = [...matching].sort((a, b) => a.power - b.power);
         } else {
@@ -1603,6 +2048,7 @@ class GameEngine {
 
     // Bot melakukan draw dalam mode simultan (terus draw sampai dapat kartu cocok atau pile habis)
     botDrawSimultaneous(bot) {
+        if (this.gs.isPaused) { setTimeout(() => this.botDrawSimultaneous(bot), 1000); return; } // [FIX] jangan draw saat dijeda
         if (bot.hasPlayed || bot.winner || this.gs.gameOver) return;
         const drewOk = this.dealCard(bot);
         if (!drewOk) {
@@ -1683,14 +2129,14 @@ class GameEngine {
         const lastRound = this.gs.roundHistory.length > 0 ? this.gs.roundHistory[this.gs.roundHistory.length - 1] : null;
         const sorted = [...fpPlayers].sort((a, b) => {
             if (a.hand.length !== b.hand.length) return a.hand.length - b.hand.length; // kartu sedikit = depan (draw), banyak = belakang (bebas)
-            if (a.totalPower !== b.totalPower) return a.totalPower - b.totalPower; // power kecil = belakang (bebas)
+            if (a.totalPower !== b.totalPower) return b.totalPower - a.totalPower; // power besar = depan (draw), kecil = belakang (bebas)
             // Tie-breaker 3: power terbesar di ronde sebelumnya = paling belakang (bebas)
             const getPrevPower = (p) => {
                 if (!lastRound) return 0;
                 const play = lastRound.plays.find(pl => pl.playerId === p.id && !pl.isForcePickPlay);
                 return play ? play.power : 0;
             };
-            return getPrevPower(b) - getPrevPower(a); // power besar di ronde lalu = lebih belakang (bebas)
+            return getPrevPower(a) - getPrevPower(b); // power besar ronde lalu = belakang (bebas)
         });
 
         // ── Tentukan siapa yang dibebaskan ──
@@ -1717,7 +2163,14 @@ class GameEngine {
 
         this.gs.drawTurnIndex = 0;
         this.gs.isProcessingDrawTurn = true;
-        this.broadcastLog(`🔄 Sistem Ambil Kartu Bergiliran dimulai! Urutan: ${this.gs.drawTurnQueue.map(p => p.name).join(' → ')}`);
+        // [FIX] Log urutan giliran ini cuma menggambarkan simulasi internal delay bot —
+        // pemain asli TIDAK pernah benar-benar menunggu giliran (mereka bisa langsung pilih
+        // begitu mustForcePick aktif). Menampilkan "Urutan: ..." di mode Ranked bisa
+        // menimbulkan kejanggalan/kecurigaan karena tidak sesuai yang dirasakan pemain.
+        // Di mode Tantang tetap ditampilkan karena memang sengaja transparan soal bot.
+        if (this.isCustomRoom) {
+            this.broadcastLog(`🔄 Sistem Ambil Kartu Bergiliran dimulai! Urutan: ${this.gs.drawTurnQueue.map(p => p.name).join(' → ')}`);
+        }
         this.processForcePick(this.gs.drawTurnQueue, []);
     }
 
@@ -1737,16 +2190,23 @@ class GameEngine {
             });
         }
 
-        // Bot ambil kartu BERSAMAAN dengan player, delay acak 2-6 detik biar natural (tidak ketahuan bot)
+        // Bot ambil kartu BERSAMAAN dengan player. Di mode Ranked, delay ACAK biar terasa
+        // natural/tersamarkan seolah-olah player asli. Di mode Tantang, penyamaran tidak
+        // relevan, jadi delay dibuat TETAP (bukan acak) — cuma dijeda bertahap per bot.
         botMustPick.forEach((bot, idx) => {
-            const randomDelay = 1500 + Math.floor(Math.random() * 1500) + idx * 500;
-            setTimeout(() => {
+            const randomDelay = this.isCustomRoom
+                ? 2000 + idx * 500                                        // Tantang: tetap, tanpa acak
+                : 1500 + Math.floor(Math.random() * 1500) + idx * 500;    // Ranked: acak (samarkan)
+            const _doBotForcePick = () => {
+                // [FIX] Jangan biarkan bot ambil kartu paksa selama match dijeda — tunggu resume dulu.
+                if (this.gs.isPaused) { setTimeout(_doBotForcePick, 1000); return; }
                 if (bot.hasPlayed || bot.winner || this.gs.gameOver) return;
                 if (this.gs.topCard.length === 0) return;
                 const level = bot.botLevel ?? 1;
                 let chosen;
                 if (level === 1) {
-                    chosen = [...this.gs.topCard].sort((a,b) => a.power - b.power)[0];
+                    // [FIX] Bot Level 1 sekarang ambil kartu POWER TERBESAR saat force pick
+                    chosen = [...this.gs.topCard].sort((a,b) => b.power - a.power)[0];
                 } else if (level === 2) {
                     chosen = [...this.gs.topCard].sort((a,b) => b.power - a.power)[0];
                 } else {
@@ -1754,7 +2214,7 @@ class GameEngine {
                     const activeOpponents = this.gs.players.filter(p => p.id !== bot.id && !p.winner);
                     const allOppProvFP    = new Set(activeOpponents.flatMap(p => p.hand.map(c => c.province)));
                     const uniqueFP        = this.gs.topCard.filter(c => !allOppProvFP.has(c.province));
-                    const rarityOrderFP   = ['mythic','legendary','epic','rareplus','rarestar','rare','uncommonplus','uncommon','commonplus','common'];
+                    const rarityOrderFP   = ['magis','sakral','mythic','legendary','epic','rareplus','rarestar','rare','uncommonplus','uncommon','commonplus','common'];
                     const sortByRarityPowerFP = (arr) => [...arr].sort((a, b) => {
                         const ri = rarityOrderFP.indexOf(a.rarity) - rarityOrderFP.indexOf(b.rarity);
                         return ri !== 0 ? ri : b.power - a.power;
@@ -1779,7 +2239,8 @@ class GameEngine {
                         setTimeout(() => { this.gs.isHandlingForcePick = false; if (!this.gs.isEndingRound) this.endRound(); }, 500);
                     }
                 }
-            }, randomDelay);
+            };
+            setTimeout(_doBotForcePick, randomDelay);
         });
 
         // Tidak ada human dan tidak ada bot, langsung endRound
@@ -1860,11 +2321,15 @@ class GameEngine {
                     });
                 } else {
                     // Bot atau human auto mode: langsung jatuhkan
-                    setTimeout(() => {
+                    // [FIX] _doAutoPlayMatch dibuat sebagai fungsi bernama supaya bisa reschedule dirinya
+                    // sendiri berulang kali selama masih dijeda, bukan cuma retry sekali.
+                    const _doAutoPlayMatch = () => {
+                        if (this.gs.isPaused) { setTimeout(_doAutoPlayMatch, 1000); return; }
                         if (player.mustPlayMatching && !player.hasPlayed) {
                             this.handlePlayCardInternal(player, newCard);
                         }
-                    }, 800);
+                    };
+                    setTimeout(_doAutoPlayMatch, 800);
                 }
             } else {
                 // ── Kartu tidak cocok → cek apakah provinsi aktif sudah habis di pile ──
@@ -1893,9 +2358,12 @@ class GameEngine {
                     });
                 } else {
                     // Bot atau human auto mode: langsung lanjut draw tanpa tunggu
-                    setTimeout(() => {
+                    // [FIX] Recheck isPaused sebelum eksekusi, reschedule diri sendiri kalau masih dijeda
+                    const _doAutoDrawAgain = () => {
+                        if (this.gs.isPaused) { setTimeout(_doAutoDrawAgain, 1000); return; }
                         if (player.mustDraw && !player.hasPlayed) this.handleDrawCardInternal(player);
-                    }, 800);
+                    };
+                    setTimeout(_doAutoDrawAgain, 800);
                 }
             }
         } else {
@@ -1922,7 +2390,8 @@ class GameEngine {
                 const level = bot.botLevel ?? 1;
                 let chosen;
                 if (level === 1) {
-                    chosen = [...this.gs.topCard].sort((a,b) => a.power - b.power)[0];
+                    // [FIX] Bot Level 1 sekarang ambil kartu POWER TERBESAR saat force pick
+                    chosen = [...this.gs.topCard].sort((a,b) => b.power - a.power)[0];
                 } else if (level === 2) {
                     chosen = [...this.gs.topCard].sort((a,b) => b.power - a.power)[0];
                 } else {
@@ -2017,6 +2486,8 @@ class GameEngine {
         while (worstRank > 0 && takenRanks.has(worstRank)) worstRank--;
         player.rank = worstRank > 0 ? worstRank : totalPlayers;
         player.winner = true;
+        player.surrendered = true; // [FIX] tandai eksplisit "menyerah" agar client bisa pakai emoji 💀, bukan medali
+        player.autoMode = false; // [FIX] indikator "Mode Otomatis" harus hilang juga saat pemain menyerah
         this.gs.winners.push(player);
         if (player.userUid && player.userUid !== "BOT" && !this.isCustomRoom) {
             player.statsSaved = true;
@@ -2056,7 +2527,8 @@ class GameEngine {
                 setTimeout(() => this.checkPhase2End(), 500);
             } else if (this.gs.phase === 1 && this.gs.phase1Player === playerId) {
                 this.gs.phase1Player = null;
-                setTimeout(() => this.systemPlayPhase1(), 500);
+                // [VOTING TAHAP 1] Pemegang hak keluar sebelum sempat main → voting ulang antar sisa pemain
+                setTimeout(() => this.startPhase1Voting(), 500);
             }
         }
     }
@@ -2068,8 +2540,30 @@ class GameEngine {
         this.gs.roundHistory.push({ round: this.gs.round, plays: [...this.gs.currentRoundPlays] });
         this.broadcastLog(`🏁 Ronde ${this.gs.round} selesai`);
         setTimeout(() => {
+            // [FIX PAUSE] Kalau sedang dijeda, JANGAN hapus/animasikan top card & JANGAN
+            // ganti ronde dulu — tunggu sampai host menekan "Lanjutkan". Cek ulang tiap 1 detik.
+            const _waitResumeThenEndRound = () => {
+                if (this.gs.isPaused) { setTimeout(_waitResumeThenEndRound, 1000); return; }
+                this._finishEndRoundTransition();
+            };
+            _waitResumeThenEndRound();
+        }, 1500);
+    }
+
+    // Bagian transisi akhir ronde (hapus top card, cek pemenang, mulai ronde berikutnya).
+    // Dipisah dari endRound() supaya bisa ditunda kalau match sedang dijeda (lihat _waitResumeThenEndRound).
+    _finishEndRoundTransition() {
             this.gs.discardPile.push(...this.gs.topCard);
             this.gs.topCard = []; this.gs.currentProvince = null;
+            // [FIX NAMA NYANGKUT] phase1Player TIDAK direset otomatis setelah pemain menjatuhkan
+            // kartu Tahap 1 secara normal (cuma direset ke null saat pemain menyerah). Kalau tidak
+            // di-null-kan di sini, broadcastGameState() di bawah ini akan mengirim currentProvince
+            // kosong TAPI phase1Player masih ID pemain/bot dari RONDE YANG BARU SAJA SELESAI —
+            // sehingga label "Menunggu ... Menjatuhkan Kartu Ke Arena..." di client sempat
+            // menampilkan nama pemain ronde lama, sebelum akhirnya diganti nama yang benar saat
+            // assignPhase1Player() jalan untuk ronde berikutnya. Reset ke null di sini membuat
+            // client jatuh ke fallback netral "Menunggu kartu..." selama jeda transisi tersebut.
+            this.gs.phase1Player = null;
             this.gs.forcePickMode = false; this.gs.forcePickPlayers = [];
             this.broadcastGameState();
             const activePlayers = this.getActivePlayers();
@@ -2125,7 +2619,6 @@ class GameEngine {
                 this.gs.isEndingRound = false; this.gs.isHandlingForcePick = false;
                 this.gs.forcePickProcessing = false; this.startPhase1();
             }, 1500);
-        }, 1500);
     }
 
     endGame() {
@@ -2154,7 +2647,7 @@ class GameEngine {
         this.gs.players.filter(p => p.rank === 0).forEach(p => { p.rank = ++safeMax; });
         this.broadcastToAll({
             type: 'GAME_OVER',
-            players: this.gs.players.map(p => ({ id: p.id, name: p.name, rank: p.rank, hand: p.hand, isBot: p.isBot })),
+            players: this.gs.players.map(p => ({ id: p.id, name: p.name, rank: p.rank, hand: p.hand, isBot: p.isBot, surrendered: p.surrendered ?? false })),
             isCustomRoom: this.isCustomRoom
         });
         saveProvinceStats(this.selectedProvinces, this.gs.players, this.roomId, this.isCustomRoom);
@@ -2232,7 +2725,7 @@ class GameEngine {
         }
 
         // Hitung rarity tertinggi yang tersisa di drawPile (untuk penanda Reset Level di client)
-        const RESET_HIERARCHY_GS = ['mythic','legendary','epic','rareplus','rarestar','rare','uncommon','uncommonplus','commonplus','common'];
+        const RESET_HIERARCHY_GS = ['magis','sakral','mythic','legendary','epic','rareplus','rarestar','rare','uncommon','uncommonplus','commonplus','common'];
         const remainingRarities = new Set(this.gs.drawPile.map(c => c.rarity));
         let highestResetRarity = null;
         for (const r of RESET_HIERARCHY_GS) { if (remainingRarities.has(r)) { highestResetRarity = r; break; } }
@@ -2256,13 +2749,19 @@ class GameEngine {
                 drawLevel: p.drawLevel ?? 1, drawCount: p.drawCount ?? 0,
                 mustPlayMatching: p.mustPlayMatching ?? false,
                 drawProb: p.drawProb ?? 0,
-                drawOnceNoMatch: p.drawOnceNoMatch ?? false
+                drawOnceNoMatch: p.drawOnceNoMatch ?? false,
+                surrendered: p.surrendered ?? false
             })),
             roundHistory: this.gs.roundHistory.slice(-10),
             winners: this.gs.winners.map(p => ({ id: p.id, name: p.name, rank: p.rank })),
             gameOver: this.gs.gameOver, rarityStock, provinceStock,
             highestResetRarity,
-            isPaused: this.gs.isPaused ?? false, isCustomRoom: this.isCustomRoom
+            isPaused: this.gs.isPaused ?? false, isCustomRoom: this.isCustomRoom,
+            // [VOTING TAHAP 1] Dikirim agar client yang reconnect di tengah voting bisa render ulang popup
+            votingActive: this.gs.votingActive ?? false,
+            votingMode: this.gs.votingMode ?? null,
+            votingParticipants: this.gs.votingParticipants ?? [],
+            votingVotedIds: Object.keys(this.gs.votingChoices ?? {})
         };
     }
 
@@ -2302,11 +2801,12 @@ class GameEngine {
     // =============================================
     // FITUR STIKER — BOT
     // Bot hanya boleh pakai stiker di mode RANKED (bukan Custom Match/Tantang).
-    // Cooldown 12 detik berlaku sama seperti player (disimpan di bot.lastStickerAt).
+    // Cooldown 8 detik berlaku sama seperti player (disimpan di bot.lastStickerAt).
     // =============================================
     botSendSticker(bot, stickerId) {
         if (!bot || !bot.isBot) return;
         if (this.isCustomRoom) return; // tidak berlaku di mode Tantang/Custom Match
+        if (this.gs.round <= 1) return; // [FIX] bot baru boleh kirim stiker setelah Ronde 1 selesai (mulai Ronde 2)
         if (!STICKER_IDS.has(stickerId)) return;
         const now = Date.now();
         if (bot.lastStickerAt && (now - bot.lastStickerAt) < STICKER_COOLDOWN_MS) return;
@@ -2365,6 +2865,10 @@ class GameEngine {
         if (player.autoModeTimerId) { clearTimeout(player.autoModeTimerId); player.autoModeTimerId = undefined; }
         player.autoModeTimerId = setTimeout(() => {
             player.autoModeTimerId = undefined;
+            // [FIX] Cek ulang isPaused di sini juga — pause bisa terjadi SETELAH timer 3 detik ini
+            // mulai berjalan tapi SEBELUM ia meledak. Tanpa recheck ini, aksi otomatis (main
+            // kartu/draw/force-pick) tetap bisa lolos walau host sudah menjeda pertandingan.
+            if (this.gs.isPaused) { this.runAutoAction(player); return; }
             if (!player.autoMode || player.hasPlayed || player.winner || this.gs.gameOver) return;
             if (this.gs.phase === 1 && this.gs.phase1Player === player.id && !player.hasPlayed) {
                 if (player.hand.length > 0) {
@@ -2835,7 +3339,7 @@ class MatchmakingQueue {
                 nextHumanSlot++;
             }
         }
-        Object.entries(room.botSlots).forEach(([pos, b]) => { slots.push({ slot: parseInt(pos), name: `Bot Lv${b.level}`, level: b.level, isBot: true, uid: null }); });
+        Object.entries(room.botSlots).forEach(([pos, b]) => { slots.push({ slot: parseInt(pos), name: `Bot ${pos} Level ${b.level} (${getCustomBotLevelLabel(b.level)})`, level: b.level, isBot: true, uid: null }); });
         const msg = JSON.stringify({ type: 'CUSTOM_ROOM_UPDATE', roomId, slots, totalSlots: slots.length, hostRole: room.hostRole, hostUid: room.hostUid });
         room.players.forEach(p => { if (p.socket.readyState === WebSocket.OPEN) { try { p.socket.send(msg); } catch(_) {} } });
         if (room.spectatorSocket?.readyState === WebSocket.OPEN) { try { room.spectatorSocket.send(msg); } catch(_) {} }
@@ -2885,10 +3389,12 @@ class MatchmakingQueue {
             gameEngine.setSelectedProvinces(selectedProvinces);
             room.players.forEach(p => gameEngine.addPlayer({ id: p.id, name: p.name, isBot: false, socket: p.socket, userUid: p.userUid }));
             const customBotNames = [];
-            Object.values(room.botSlots).forEach(b => {
-                const bName = `Bot Lv${b.level}`;
+            // [FIX] Nama bot IN-GAME (dalam pertandingan) dibuat lebih ringkas: "Bot {slot} Level {level}"
+            // tanpa label kesulitan (Mudah/Normal/Sulit) — label itu cukup ditampilkan di lobi saja.
+            Object.entries(room.botSlots).forEach(([pos, b]) => {
+                const bName = `Bot ${pos} Level ${b.level}`;
                 gameEngine.addBot(bName, b.level);
-                customBotNames.push(`${bName} (Level ${b.level})`);
+                customBotNames.push(bName);
             });
             if (customBotNames.length > 0) {
                 console.log(`🤖 BOT CUSTOM ROOM — Room: ${roomId}`);
@@ -3173,6 +3679,7 @@ setInterval(() => matchmaking.cleanupFinishedRooms(), 60000);
 // dengan socket CLOSED/tidak OPEN, evict mereka dan broadcast update ke host.
 // Ini memastikan host selalu melihat slot yang akurat meski pemain crash tanpa LEAVE_CUSTOM_ROOM.
 setInterval(() => {
+    if (matchmaking.pendingCustomRooms.size === 0) return; // [HEMAT KUOTA] tidak ada room pending, tidak perlu cek apa-apa
     for (const [roomId, room] of matchmaking.pendingCustomRooms) {
         if (room.started) continue;
         const ghosts = room.players.filter(p => p.userUid !== room.hostUid && p.socket.readyState !== WebSocket.OPEN);
@@ -3284,6 +3791,16 @@ wss.on('connection', (socket) => {
                     }
                     break;
 
+                case 'VOTE_CHOICE':
+                    // [VOTING TAHAP 1] Pemain memilih kartu hitam/putih atau gunting/batu/kertas
+                    if (currentPlayer && data.roomId) {
+                        const room = matchmaking.getRoom(data.roomId);
+                        if (room && !room.gameEngine.gs.isPaused) {
+                            room.gameEngine.handleVoteChoice(currentPlayer.id, data.choice);
+                        }
+                    }
+                    break;
+
                 case 'PAUSE_GAME': {
                     if (isCustomRoomSpectator && currentCustomRoomId && data.userUid) {
                         const room = matchmaking.getRoom(currentCustomRoomId);
@@ -3293,6 +3810,21 @@ wss.on('connection', (socket) => {
                         }
                     } else {
                         try { socket.send(JSON.stringify({ type: 'ERROR', message: 'Hanya host penonton yang dapat pause.' })); } catch(_) {}
+                    }
+                    break;
+                }
+
+                // [FITUR BARU] Pause/resume voting Tahap 1 — bisa dipakai SEMUA spectator (bukan cuma host),
+                // tapi HANYA berlaku selama voting sedang berlangsung (gs.votingActive).
+                case 'PAUSE_VOTING': {
+                    if (isCustomRoomSpectator && currentCustomRoomId && data.userUid) {
+                        const room = matchmaking.getRoom(currentCustomRoomId);
+                        if (room && room.gameEngine.isCustomRoom) {
+                            const res = room.gameEngine.handleVotingPause(data.userUid);
+                            if (!res.success) { try { socket.send(JSON.stringify({ type: 'ERROR', message: res.error })); } catch(_) {} }
+                        }
+                    } else {
+                        try { socket.send(JSON.stringify({ type: 'ERROR', message: 'Hanya penonton yang dapat menjeda voting.' })); } catch(_) {}
                     }
                     break;
                 }
@@ -3384,7 +3916,7 @@ wss.on('connection', (socket) => {
                                 const gp = finishedRoom.gameEngine.getPlayerById(data.playerId);
                                 const uidOk = gp && (!gp.userUid || gp.userUid === (data.userUid || ''));
                                 if (uidOk) {
-                                    try { socket.send(JSON.stringify({ type: 'GAME_OVER', players: finishedRoom.gameEngine.gs.players.map(p => ({ id: p.id, name: p.name, rank: p.rank, hand: p.hand, isBot: p.isBot })), isCustomRoom: finishedRoom.gameEngine.isCustomRoom })); } catch(_) {}
+                                    try { socket.send(JSON.stringify({ type: 'GAME_OVER', players: finishedRoom.gameEngine.gs.players.map(p => ({ id: p.id, name: p.name, rank: p.rank, hand: p.hand, isBot: p.isBot, surrendered: p.surrendered ?? false })), isCustomRoom: finishedRoom.gameEngine.isCustomRoom })); } catch(_) {}
                                     if (gp && gp.rank > 0) { try { socket.send(JSON.stringify({ type: 'SAVE_STATS_CLIENT', rank: gp.rank })); } catch (_) {} }
                                 } else { try { socket.send(JSON.stringify({ type: 'ERROR', message: 'Akun tidak cocok.' })); } catch(_) {} }
                             } else { try { socket.send(JSON.stringify({ type: 'ERROR', message: 'Room tidak ditemukan atau sudah berakhir.' })); } catch(_) {} }
@@ -3412,7 +3944,7 @@ wss.on('connection', (socket) => {
                             // kirim GAME_OVER agar spectator bisa lihat hasil akhir, bukan ERROR.
                             const finishedRoom = matchmaking.getRoom(data.roomId);
                             if (finishedRoom) {
-                                try { socket.send(JSON.stringify({ type: 'GAME_OVER', players: finishedRoom.gameEngine.gs.players.map(p => ({ id: p.id, name: p.name, rank: p.rank, hand: p.hand, isBot: p.isBot })), isCustomRoom: finishedRoom.gameEngine.isCustomRoom, isSpectator: true })); } catch(_) {}
+                                try { socket.send(JSON.stringify({ type: 'GAME_OVER', players: finishedRoom.gameEngine.gs.players.map(p => ({ id: p.id, name: p.name, rank: p.rank, hand: p.hand, isBot: p.isBot, surrendered: p.surrendered ?? false })), isCustomRoom: finishedRoom.gameEngine.isCustomRoom, isSpectator: true })); } catch(_) {}
                             } else {
                                 try { socket.send(JSON.stringify({ type: 'ERROR', message: 'Pertandingan telah berakhir.' })); } catch(_) {}
                             }
@@ -3804,6 +4336,7 @@ function serializeRooms() {
 
 /** Simpan snapshot ke disk */
 function saveSnapshot() {
+    if (matchmaking.rooms.size === 0) return; // [HEMAT KUOTA] tidak ada room aktif, tidak perlu tulis snapshot kosong
     try {
         const data = { savedAt: Date.now(), rooms: serializeRooms() };
         fs.writeFileSync(STATE_FILE, JSON.stringify(data), 'utf8');
@@ -3877,6 +4410,11 @@ function restoreSnapshot() {
                         .map(p => ({ id: p.id, name: p.name, socket: null, userUid: p.userUid }))
                 };
                 matchmaking.rooms.set(roomId, room);
+                // [VOTING TAHAP 1] Kalau server restart persis di tengah voting (jendela ~10 detik),
+                // snapshot tidak menyimpan pilihan yang belum final — mulai ulang voting dari awal.
+                if (ge.gs.phase === 1 && !ge.gs.phase1Player && !ge.gs.gameOver) {
+                    setTimeout(() => ge.startPhase1Voting(), 1500);
+                }
                 restored++;
                 console.log(`♻️  Room ${roomId} di-restore (${snap.gs.players.filter(p=>!p.isBot).length} pemain manusia)`);
             } catch (e) {
