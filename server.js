@@ -2242,7 +2242,7 @@ class GameEngine {
                 if ((bot.forcedStreakCount || 0) > 2) this.botSendSticker(bot, 'nangis');
                 this.checkBotTengilSticker(bot);
                 this.gs.currentRoundPlays.push({ playerId: bot.id, playerName: bot.name, card: chosen, power: chosen.power, isForcePickPlay: true });
-                this.broadcastLog(`?? ${bot.name} Mengambil kartu: ${chosen.name} (Kekuatan: ${chosen.power})`);
+                this.broadcastLog(`👤 ${bot.name} Mengambil kartu: ${chosen.name} (Kekuatan: ${chosen.power})`);
                 this.broadcastGameState();
                 // Jika tidak ada human, cek apakah semua bot sudah selesai lalu endRound
                 if (!humanMustPick) {
