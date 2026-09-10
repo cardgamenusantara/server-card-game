@@ -1,5 +1,5 @@
 // ================================================
-// CARD GAME NUSANTARA - FULL SERVER untuk deno server 2 
+// CARD GAME NUSANTARA - FULL SERVER untuk deno server 2 wss2
 // judul skripsi : PENGEMBANGAN MEDIA WEBSITE CARD GAME NUSANTARA MATERI DAERAHKU KEBANGGAANKU PADA MATA PELAJARAN IPAS KELAS V SD
 // server.js - Converted from Deno (main.ts) to Node.js
 // ================================================
