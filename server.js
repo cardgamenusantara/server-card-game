@@ -1,5 +1,5 @@
 // ================================================
-// CARD GAME NUSANTARA - FULL SERVER v2
+// CARD GAME NUSANTARA - FULL SERVER untuk deno server 2 
 // judul skripsi : PENGEMBANGAN MEDIA WEBSITE CARD GAME NUSANTARA MATERI DAERAHKU KEBANGGAANKU PADA MATA PELAJARAN IPAS KELAS V SD
 // server.js - Converted from Deno (main.ts) to Node.js
 // ================================================
@@ -1251,12 +1251,14 @@ class GameEngine {
             player.drawLevel = 1;
             player.drawCount = 0;
             player.drawProb = 0;
-            this.broadcastLog(`\uD83D\uDD04 ${player.name} dapat [${resetReason}] (tertinggi)! Level Kartu reset ke Lv1.`);
+            this.broadcastLog(`\uD83D\uDD04 ${player.name} Level Kartu reset ke Lv1 (dapat kartu tertinggi yang tersisa)!`);
+            if (!player.isBot) this.sendToPlayer(player.id, { type: 'LOG', message: `\uD83D\uDD04 Kamu dapat [${resetReason}] (tertinggi)! Level Kartu reset ke Lv1.` });
         }
         const probPct  = Math.round(prob * 100);
         const isMatch  = chosen.province === this.gs.currentProvince;
         const modeStr  = useMatching ? `✅ Cocok [prob ${probPct}%]` : `❌ Non-Cocok [prob ${probPct}%]`;
-        this.broadcastLog(`🎴 ${player.name} [${LEVEL_NAMES[level]}] tambah kartu: ${chosen.name} (${chosen.rarity}/${chosen.province}) ${modeStr}`);
+        this.broadcastLog(`🎴 ${player.name} [${LEVEL_NAMES[level]}] tambah kartu ${modeStr}`);
+        if (!player.isBot) this.sendToPlayer(player.id, { type: 'LOG', message: `🎴 Kamu [${LEVEL_NAMES[level]}] tambah kartu: ${chosen.name} (${chosen.rarity}/${chosen.province}) ${modeStr}` });
         return true;
     }
 
